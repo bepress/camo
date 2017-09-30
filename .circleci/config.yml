@@ -36,7 +36,8 @@ jobs:
                 name: Upload build artifact - maybe
                 command: |
                     if [ "${CIRCLE_BRANCH}" == "master" ]; then
-                        make master
+                        # make master
+                        echo "skipped build on master"
                     fi 
                     if [ -n "${CIRCLE_TAG}" ]; then
                         make release
