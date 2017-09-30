@@ -1,0 +1,20 @@
+[Unit]
+Description=TLS asset proxy for non TLS assets
+ConditionPathExists=/usr/local/bin/camo
+After=network.target
+
+[Service]
+Type=simple
+User=camo
+Group=camo
+LimitNOFILE=500000
+
+Restart=on-failure
+RestartSec=10
+startLimitIntervalSec=60
+
+WorkingDirectory=/var/camo
+ExecStart=/usr/local/bin/camo 
+
+[Install]
+WantedBy=multi-user.target
