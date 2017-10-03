@@ -29,11 +29,13 @@ func MustNew(hmacKey []byte, options ...func(*Proxy)) *Proxy {
 
 	p := &Proxy{
 		// Change the constructor name
-		Decoder:        camourl.MustNewURLDecoder(hmacKey),
-		MaxSize:        DefaultMaxSize,
-		MaxRedirects:   DefaultMaxRedirects,
-		RequestTimeout: DefaultRequestTimeout,
-		ServerName:     DefaultServerName,
+		Decoder:             decoder.MustNew(hmacKey),
+		MaxSize:             DefaultMaxSize,
+		MaxRedirects:        DefaultMaxRedirects,
+		RequestTimeout:      DefaultRequestTimeout,
+		ServerName:          DefaultServerName,
+		DisableKeepAlivesBE: DefaultKABE,
+		DisableKeepAlivesFE: DefaultKAFE,
 	}
 
 	for _, opt := range options {
@@ -45,8 +47,7 @@ func MustNew(hmacKey []byte, options ...func(*Proxy)) *Proxy {
 
 // Proxy implements the handler for proxying assets.
 type Proxy struct {
-	// TODO(ro) 2017-10-02 Rename the encoding package something better.
-	Decoder camourl.Decoder
+	Decoder decoder.Decoder
 
 	MaxSize        int64
 	MaxRedirects   int

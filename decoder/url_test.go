@@ -2,14 +2,14 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package encoding_test
+package decoder_test
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/bepress/camo/checkers"
-	"github.com/bepress/camo/encoding"
+	"github.com/bepress/camo/decoder"
 )
 
 func TestMustNewURLDecoderPanics(t *testing.T) {
@@ -19,7 +19,7 @@ func TestMustNewURLDecoderPanics(t *testing.T) {
 		}
 	}()
 
-	_ = encoding.MustNew(nil)
+	_ = decoder.MustNew(nil)
 }
 
 func TestDecodeURLs(t *testing.T) {
@@ -40,7 +40,7 @@ func TestDecodeURLs(t *testing.T) {
 	}
 
 	for _, test := range table {
-		tut := encoding.MustNew([]byte(test.hmackey))
+		tut := decoder.MustNew([]byte(test.hmackey))
 		dig, url := serverSplitURL(test.in)
 		got, err := tut.Decode(dig, url)
 		if test.wantErr {
@@ -58,7 +58,7 @@ func serverSplitURL(s string) (string, string) {
 }
 
 func BenchmarkDecode(b *testing.B) {
-	tut := encoding.MustNew([]byte("test"))
+	tut := decoder.MustNew([]byte("test"))
 	fut := tut.Decode
 	for i := 0; i < b.N; i++ {
 		fut("D23vHLFHsOhPOcvdxeoQyAJTpvM", "aHR0cDovL2dvbGFuZy5vcmcvZG9jL2dvcGhlci9mcm9udHBhZ2UucG5n")
