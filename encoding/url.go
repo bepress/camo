@@ -21,8 +21,8 @@ type Decoder interface {
 	Decode(string, string) (string, error)
 }
 
-// MustNewURLDecoder returns a new UrlDecoder or panics.
-func MustNewURLDecoder(hmackey []byte) URLDecoder {
+// MustNew returns a new UrlDecoder or panics.
+func MustNew(hmackey []byte) URLDecoder {
 	if len(hmackey) == 0 {
 		panic("empty hmac not allowed")
 	}

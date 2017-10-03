@@ -19,7 +19,7 @@ func TestMustNewURLDecoderPanics(t *testing.T) {
 		}
 	}()
 
-	_ = encoding.MustNewURLDecoder(nil)
+	_ = encoding.MustNew(nil)
 }
 
 func TestDecodeURLs(t *testing.T) {
@@ -40,7 +40,7 @@ func TestDecodeURLs(t *testing.T) {
 	}
 
 	for _, test := range table {
-		tut := encoding.MustNewURLDecoder([]byte(test.hmackey))
+		tut := encoding.MustNew([]byte(test.hmackey))
 		dig, url := serverSplitURL(test.in)
 		got, err := tut.Decode(dig, url)
 		if test.wantErr {
@@ -55,4 +55,12 @@ func TestDecodeURLs(t *testing.T) {
 func serverSplitURL(s string) (string, string) {
 	parts := strings.SplitN(s, "/", 3)
 	return parts[1], parts[2]
+}
+
+func BenchmarkDecode(b *testing.B) {
+	tut := encoding.MustNew([]byte("test"))
+	fut := tut.Decode
+	for i := 0; i < b.N; i++ {
+		fut("D23vHLFHsOhPOcvdxeoQyAJTpvM", "aHR0cDovL2dvbGFuZy5vcmcvZG9jL2dvcGhlci9mcm9udHBhZ2UucG5n")
+	}
 }
