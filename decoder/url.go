@@ -1,4 +1,4 @@
-// Package encoding implements base64 decoding of signed urls for insecure
+// Package decoder implements base64 decoding of signed urls for insecure
 // asset proxying.
 // Copyright (c) 2012-2016 Eli Janssen
 // Copyright (c) 2017 Berkeley Electronic Press

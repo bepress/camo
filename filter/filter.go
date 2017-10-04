@@ -1,13 +1,18 @@
 package filter
 
-import "github.com/asergeyev/nradix"
+import (
+	"github.com/asergeyev/nradix"
+)
 
-// NewCIDR returns a new CIDR filter.
-func NewCIDR(filtered []string) *CIDRFilter {
+// MustNewCIDR returns a new CIDR filter.
+func MustNewCIDR(filtered []string) *CIDRFilter {
 	tree := nradix.NewTree(len(filtered))
 	f := &CIDRFilter{t: tree}
 	for _, cidr := range filtered {
-		f.t.AddCIDR(cidr, false)
+		err := f.t.AddCIDR(cidr, false)
+		if err != nil {
+			panic("failed to create filter: " + err.Error())
+		}
 	}
 	return f
 }
@@ -23,7 +28,7 @@ func (f *CIDRFilter) Allowed(cidr string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	// If there's no entry the return value is nil. So it it not filtered.
+	// If there's no entry the return value is nil. So it is not filtered.
 	if allowed == nil {
 		return true, nil
 	}
