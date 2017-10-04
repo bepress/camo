@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/asergeyev/nradix"
+  packages = ["."]
+  revision = "3872ab85bb568d5400c3f53ac4d903744b2c8ea9"
+
+[[projects]]
   name = "github.com/rs/zerolog"
   packages = [".","internal/json","log"]
   revision = "3ac71fc58dbd43122668a912b755b0979ba9ce1f"
@@ -10,6 +16,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "46b02f3be287d321c0ede6b06aa5e2e0566977834dfbbd0ff4d2424b85b546cd"
+  inputs-digest = "33a7a0677d1807a3c8659118e099cb12fa53cf0740efc650e6511cc0d6db828a"
   solver-name = "gps-cdcl"
   solver-version = 1
