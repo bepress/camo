@@ -1,14 +1,18 @@
 package proxy_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/bepress/camo/checkers"
+	"github.com/bepress/camo/filter"
 	"github.com/bepress/camo/proxy"
+	"github.com/rs/zerolog"
 )
 
 func TestProxyPanicsNilKey(t *testing.T) {
@@ -18,7 +22,7 @@ func TestProxyPanicsNilKey(t *testing.T) {
 		}
 	}()
 
-	_ = proxy.MustNew(nil)
+	_ = proxy.MustNew(nil, zerolog.New(ioutil.Discard))
 }
 
 func TestProxyPanicsEmptyKey(t *testing.T) {
@@ -28,11 +32,11 @@ func TestProxyPanicsEmptyKey(t *testing.T) {
 		}
 	}()
 
-	_ = proxy.MustNew([]byte(""))
+	_ = proxy.MustNew([]byte(""), zerolog.New(ioutil.Discard))
 }
 
 func TestDefaultProxyValues(t *testing.T) {
-	tut := proxy.MustNew([]byte("test"))
+	tut := proxy.MustNew([]byte("test"), zerolog.New(ioutil.Discard))
 
 	checkers.Equals(t, tut.MaxRedirects, 10)
 	checkers.Equals(t, tut.MaxSize, int64(5*1024*1024))
@@ -44,6 +48,7 @@ func TestProxyWithOptions(t *testing.T) {
 	}}
 
 	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
 		func(p *proxy.Proxy) { p.MaxRedirects = 1 },
 		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
 		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: "http://example.com/someurl"} })
@@ -57,35 +62,47 @@ func TestProxyWithOptions(t *testing.T) {
 
 func TestAllowedMethods(t *testing.T) {
 	table := []struct {
-		uri        string
-		method     string
-		wantCode   int
-		wantHeader string
-		url        string
+		signedURI   string
+		method      string
+		wantCode    int
+		wantHeader  string
+		unSignedURI string
 	}{
-		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "GET", 200, "", "http://testing.bepress.com/sid_gallery_one/1019/preview.jpg"},
-		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "HEAD", 200, "", "http://testing.bepress.com/sid_gallery_one/1019/preview.jpg"},
-		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "PUT", 405, "GET,HEAD", "http://testing.bepress.com/sid_gallery_one/1019/preview.jpg"},
-		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "POST", 405, "GET,HEAD", "http://testing.bepress.com/sid_gallery_one/1019/preview.jpg"},
-		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "DELETE", 405, "GET,HEAD", "http://testing.bepress.com/sid_gallery_one/1019/preview.jpg"},
+		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "GET", 200, "", "/sid_gallery_one/1019/preview.jpg"},
+		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "HEAD", 200, "", "/sid_gallery_one/1019/preview.jpg"},
+		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "PUT", 405, "GET,HEAD", "/sid_gallery_one/1019/preview.jpg"},
+		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "POST", 405, "GET,HEAD", "/sid_gallery_one/1019/preview.jpg"},
+		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc", "DELETE", 405, "GET,HEAD", "/sid_gallery_one/1018/preview.jpg"},
 	}
 
 	resolver := DummyResolver{ips: []net.IP{
 		net.ParseIP("72.5.9.223"),
 	}}
+
+	hmacKey := []byte("test")
+
 	tut := proxy.MustNew(
-		[]byte("test"),
+		hmacKey,
+		zerolog.New(ioutil.Discard),
 		func(p *proxy.Proxy) {
-			p.Decoder = DummyDecoder{url: "http://bepress.com/someurl"}
+			p.Decoder = DummyDecoder{url: "http://fail"} // Set later
 		},
 		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
 	)
+
+	// The test camo server which decodes and fetches from backend.
 	ts := httptest.NewTLSServer(tut)
 
 	client := ts.Client()
+	// Disable compression since we don't set it up on the BE.
+	client.Transport.(*http.Transport).DisableCompression = true
+
+	// The backend server that we proxy to/from.
+	tsBE := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "/sid_gallery_one/1019/preview.jpg") }))
+
 	for _, test := range table {
-		tut.Decoder = DummyDecoder{url: test.url}
-		req, err := http.NewRequest(test.method, ts.URL+test.uri, nil)
+		tut.Decoder = DummyDecoder{url: tsBE.URL + test.unSignedURI}
+		req, err := http.NewRequest(test.method, ts.URL+test.signedURI, nil)
 		checkers.OK(t, err)
 
 		resp, err := client.Do(req)
@@ -98,7 +115,7 @@ func TestAllowedMethods(t *testing.T) {
 			got, err := ioutil.ReadAll(resp.Body)
 			checkers.OK(t, err)
 			resp.Body.Close()
-			checkers.Equals(t, string(got), test.url)
+			checkers.Equals(t, string(got), test.unSignedURI)
 		}
 	}
 }
@@ -130,6 +147,7 @@ func TestExpectedHeaders(t *testing.T) {
 	for _, test := range table {
 		tut := proxy.MustNew(
 			[]byte("test"),
+			zerolog.New(ioutil.Discard),
 			func(p *proxy.Proxy) { p.DisableKeepAlivesFE = test.disableFE },
 			func(p *proxy.Proxy) { p.ServerName = testName },
 			func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
@@ -152,6 +170,7 @@ func TestRedirectLoop(t *testing.T) {
 	}}
 	tut := proxy.MustNew(
 		[]byte("test"),
+		zerolog.New(ioutil.Discard),
 		func(p *proxy.Proxy) { p.ServerName = testName },
 		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
 		func(p *proxy.Proxy) {
@@ -198,7 +217,7 @@ func TestInvalidPath(t *testing.T) {
 			"invalid signature: invalid mac\n"},
 	}
 
-	tut := proxy.MustNew([]byte("test"))
+	tut := proxy.MustNew([]byte("test"), zerolog.New(ioutil.Discard))
 	ts := httptest.NewTLSServer(tut)
 	client := ts.Client()
 	for _, test := range table {
@@ -215,6 +234,7 @@ func TestInvalidPath(t *testing.T) {
 
 func TestDefaultFilter(t *testing.T) {
 	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
 		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: "http://10.1.10.1/someurl"} },
 	)
 
@@ -270,15 +290,6 @@ func TestDefaultFilter(t *testing.T) {
 	}
 }
 
-/*
-http://testing.bepress.com/sid_gallery_one/1019/preview.jpg /sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc
-http://testing.bepress.com/ir-style.css /RmDkWFEA7etLC6Pgd_COaWEp8bQ/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vaXItc3R5bGUuY3Nz
-http://cdnjs.cloudflare.com/ajax/libs/yui/3.6.0/widget-base/assets/skins/sam/widget-base.css /e6iuhmdNpka4vV-ETwxDuv1nCbM/aHR0cDovL2NkbmpzLmNsb3VkZmxhcmUuY29tL2FqYXgvbGlicy95dWkvMy42LjAvd2lkZ2V0LWJhc2UvYXNzZXRzL3NraW5zL3NhbS93aWRnZXQtYmFzZS5jc3M
-http://testing.bepress.com/assets/images/arrows.png /ACiydm0hQZZSuOTQNj8gfz_m-Yk/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vYXNzZXRzL2ltYWdlcy9hcnJvd3MucG5n
-http://cdnjs.cloudflare.com/ajax/libs/yui/3.6.0/json-stringify/json-stringify-min.js /TNO2a12YDtDId_0k6G3PanZAYWw/aHR0cDovL2NkbmpzLmNsb3VkZmxhcmUuY29tL2FqYXgvbGlicy95dWkvMy42LjAvanNvbi1zdHJpbmdpZnkvanNvbi1zdHJpbmdpZnktbWluLmpz
-http://testing.bepress.com/sid_gallery_one/1019/preview.jpg /sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlfb25lLzEwMTkvcHJldmlldy5qcGc
-
-*/
 type DummyDecoder struct {
 	err error
 	url string
@@ -302,3 +313,65 @@ func (dr DummyResolver) LookupIP(s string) ([]net.IP, error) {
 	}
 	return dr.ips, nil
 }
+
+func TestReverseProxyFlushInterval(t *testing.T) {
+	const expected = "hi"
+	// The backend server we proxy for.
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(expected))
+	}))
+
+	defer backend.Close()
+
+	// 	_, err := url.Parse(backend.URL + "/ldskjf/sldkjf")
+	// 	if err != nil {
+	// 		t.Fatal(err)
+	// 	}
+
+	resolver := DummyResolver{ips: []net.IP{
+		net.ParseIP("127.0.0.1"),
+	}}
+
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
+		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: backend.URL + "/lskdjf/lsdkjf"} },
+		func(p *proxy.Proxy) { p.Filter = filter.MustNewCIDR([]string{}) },
+		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
+		func(p *proxy.Proxy) { p.CheckUnicast = false },
+		func(p *proxy.Proxy) { p.FlushInterval = time.Millisecond },
+	)
+
+	done := make(chan bool)
+	proxy.OnExitFlushLoop = func() { done <- true }
+	defer func() { proxy.OnExitFlushLoop = nil }()
+
+	frontend := httptest.NewServer(tut)
+	defer frontend.Close()
+
+	req, _ := http.NewRequest("GET", frontend.URL+"/ldskjf/lsdkjf", nil)
+	req.Close = true
+	res, err := frontend.Client().Do(req)
+	checkers.OK(t, err)
+	defer res.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(res.Body)
+	checkers.Equals(t, string(bodyBytes), expected)
+
+	select {
+	case <-done:
+		// OK
+	case <-time.After(5 * time.Second):
+		t.Error("maxLatencyWriter flushLoop() never exited")
+	}
+}
+
+// TODO(ro) 2017-10-10 - Didn't end up needing this, delete?
+// signURL signs urls so we can make them for our test servers.
+// func signURL(key []byte, url string) string {
+// 	oBytes := []byte(url)
+// 	mac := hmac.New(sha1.New, key)
+// 	mac.Write(oBytes)
+// 	macSum := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+// 	encodedURL := base64.RawURLEncoding.EncodeToString(oBytes)
+// 	encURL := "/" + macSum + "/" + encodedURL
+// 	return encURL
+// }

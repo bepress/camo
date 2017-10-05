@@ -2,39 +2,39 @@
 // TODO(ro) 2017-10-03 add cactus (c)
 package proxy
 
-// ValidReqHeaders are http request headers that are acceptable to pass from
-// the client to the remote server. Only those present and true, are forwarded.
-// Empty implies no filtering.
-var ValidReqHeaders = map[string]bool{
-	"Accept":         true,
-	"Accept-Charset": true,
-	// images (aside from xml/svg), don't generally benefit (generally) from
-	// compression
-	// "Accept-Encoding":   false,
-	"Accept-Language":   true,
-	"Cache-Control":     true,
-	"If-None-Match":     true,
-	"If-Modified-Since": true,
-	"X-Forwarded-For":   true,
-	"X-Forwarded-Proto": true,
-}
+// // ValidReqHeaders are http request headers that are acceptable to pass from
+// // the client to the remote server. Only those present and true, are forwarded.
+// // Empty implies no filtering.
+// var ValidReqHeaders = map[string]bool{
+// 	"Accept":         true,
+// 	"Accept-Charset": true,
+// 	// images (aside from xml/svg), don't generally benefit (generally) from
+// 	// compression
+// 	// "Accept-Encoding":   false,
+// 	"Accept-Language":   true,
+// 	"Cache-Control":     true,
+// 	"If-None-Match":     true,
+// 	"If-Modified-Since": true,
+// 	"X-Forwarded-For":   true,
+// 	"X-Forwarded-Proto": true,
+// }
 
-// ValidRespHeaders are http response headers that are acceptable to pass from
-// the remote server to the client. Only those present and true, are forwarded.
-// Empty implies no filtering.
-var ValidRespHeaders = map[string]bool{
-	// Do not offer to accept range requests
-	"Accept-Ranges":    false,
-	"Cache-Control":    true,
-	"Content-Encoding": true,
-	"Content-Type":     true,
-	"Etag":             true,
-	"Expires":          true,
-	"Last-Modified":    true,
-	// override in response with either nothing, or ServerNameVer
-	"Server":            false,
-	"Transfer-Encoding": true,
-}
+// // ValidRespHeaders are http response headers that are acceptable to pass from
+// // the remote server to the client. Only those present and true, are forwarded.
+// // Empty implies no filtering.
+// var ValidRespHeaders = map[string]bool{
+// 	// Do not offer to accept range requests
+// 	"Accept-Ranges":    false,
+// 	"Cache-Control":    true,
+// 	"Content-Encoding": true,
+// 	"Content-Type":     true,
+// 	"Etag":             true,
+// 	"Expires":          true,
+// 	"Last-Modified":    true,
+// 	// override in response with either nothing, or ServerNameVer
+// 	"Server":            false,
+// 	"Transfer-Encoding": true,
+// }
 
 // FilteredIPNetworks contains networks to reject. All special addresses
 // initially.
