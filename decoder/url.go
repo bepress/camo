@@ -1,11 +1,11 @@
-// Package encoding implements base64 decoding of signed urls for insecure
+// Package decoder implements base64 decoding of signed urls for insecure
 // asset proxying.
 // Copyright (c) 2012-2016 Eli Janssen
 // Copyright (c) 2017 Berkeley Electronic Press
 // Copyright (c) 2017 Reed O'Brien reed@reedobrien.com
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
-package encoding
+package decoder
 
 import (
 	"crypto/hmac"

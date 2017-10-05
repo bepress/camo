@@ -1,18 +1,30 @@
 package filter_test
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/asergeyev/nradix"
 	"github.com/bepress/camo/checkers"
 	"github.com/bepress/camo/filter"
 )
 
-func TestNew(t *testing.T) {
-	tut := filter.NewCIDR([]string{"10.0.0.0/8"})
+func TestMustNew(t *testing.T) {
+	tut := filter.MustNewCIDR([]string{"10.0.0.0/8"})
 	got, err := tut.Allowed("10.1.1.1")
 	checkers.OK(t, err)
 	checkers.Equals(t, got, false)
+}
+
+func TestMustNewPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic didn't happen")
+		}
+	}()
+
+	// Invalid CIDR
+	_ = filter.MustNewCIDR([]string{"224.0.0/24"})
+
 }
 
 func TestIP4(t *testing.T) {
@@ -21,6 +33,11 @@ func TestIP4(t *testing.T) {
 		"127.0.0.0/8",
 		// ipv4 link local
 		"169.254.0.0/16",
+		// mboned
+		"224.0.0.0/24", // Local Network Control Block
+		"224.0.1.0/24", // Internetwork Control Block
+		"224.0.23.0/24",
+		"239.255.255.0/24", // Internetwork Control Block
 		// ipv4 rfc1918
 		"10.0.0.0/8",
 		"172.16.0.0/12",
@@ -33,6 +50,9 @@ func TestIP4(t *testing.T) {
 		{"127.0.0.1", false},
 		{"127.0.1.1", false},
 		{"8.8.8.8", true},
+		{"224.0.0.1", false},
+		{"224.0.1.1", false},
+		{"239.255.255.250", false},
 		{"169.254.55.123", false},
 		{"10.0.1.10", false},
 		{"192.255.1.2", true},
@@ -41,7 +61,7 @@ func TestIP4(t *testing.T) {
 		{"192.168.1.1", false},
 	}
 
-	tut := filter.NewCIDR(filtered)
+	tut := filter.MustNewCIDR(filtered)
 	for _, test := range table {
 		got, err := tut.Allowed(test.addr)
 		checkers.OK(t, err)
@@ -75,12 +95,18 @@ func TestIP6(t *testing.T) {
 		{"0:0:0:0:0:ffff:49fc:e3ab", false}, // 73.252.227.171 mapped to ipv6
 	}
 
-	tut := filter.NewCIDR(filtered)
+	tut := filter.MustNewCIDR(filtered)
 	for _, test := range table {
-		fmt.Println("testing:", test.addr)
 		got, err := tut.Allowed(test.addr)
 		checkers.OK(t, err)
 		checkers.Equals(t, got, test.want)
 	}
 
+}
+
+func TestAllowError(t *testing.T) {
+	tut := filter.MustNewCIDR([]string{"127.0.0.1/32"})
+	got, err := tut.Allowed("invalid")
+	checkers.Equals(t, got, false)
+	checkers.Equals(t, err, nradix.ErrBadIP)
 }

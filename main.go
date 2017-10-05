@@ -1,13 +1,10 @@
 package main
 
-import "fmt"
+import "net/http"
+import "github.com/bepress/camo/proxy"
 
 func main() {
-	fmt.Println(Hello())
-}
-
-// Hello is a place holder
-func Hello() string {
-	return "vim-go"
-
+	p := proxy.MustNew([]byte("test"))
+	s := http.Server{Addr: ":8888", Handler: p}
+	s.ListenAndServe()
 }
