@@ -209,7 +209,7 @@ func TestRedirectLoop(t *testing.T) {
 	checkers.Equals(t, string(got), "Redirect loop detected\n")
 }
 
-func TestInvalidPath(t *testing.T) {
+func TestInvalidPathOrURL(t *testing.T) {
 	table := []struct {
 		uri      string
 		wantCode int
@@ -231,6 +231,7 @@ func TestInvalidPath(t *testing.T) {
 		{"/sYH2aI8SV7JV_KpxO2zgGetvJbw/aHR0cDovL3Rlc3RpbmcuYmVwcmVzcy5jb20vc2lkX2dhbGxlcnlb25lLzEwMTkvcHJldmlldy5qcGc",
 			http.StatusForbidden,
 			"invalid signature: invalid mac\n"},
+		{"/hzjem40Uq4-3xt4B8ZsGnQlCNM0/aHR0cDovLzE5Mi4xNjguMC4lMzEvbm90L3ZhbGlk", http.StatusForbidden, "Invalid downstream URL: parse http://192.168.0.%31/not/valid: invalid URL escape \"%31\"\n"},
 	}
 
 	tut := proxy.MustNew([]byte("test"), zerolog.New(ioutil.Discard))
@@ -333,16 +334,11 @@ func (dr DummyResolver) LookupIP(s string) ([]net.IP, error) {
 func TestReverseProxyFlushInterval(t *testing.T) {
 	const expected = "hi"
 	// The backend server we proxy for.
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	tsBE := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(expected))
 	}))
 
-	defer backend.Close()
-
-	// 	_, err := url.Parse(backend.URL + "/ldskjf/sldkjf")
-	// 	if err != nil {
-	// 		t.Fatal(err)
-	// 	}
+	defer tsBE.Close()
 
 	resolver := DummyResolver{ips: []net.IP{
 		net.ParseIP("127.0.0.1"),
@@ -350,7 +346,7 @@ func TestReverseProxyFlushInterval(t *testing.T) {
 
 	tut := proxy.MustNew([]byte("test"),
 		zerolog.New(ioutil.Discard),
-		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: backend.URL + "/lskdjf/lsdkjf"} },
+		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: tsBE.URL + "/lskdjf/lsdkjf"} },
 		func(p *proxy.Proxy) { p.Filter = filter.MustNewCIDR([]string{}) },
 		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
 		func(p *proxy.Proxy) { p.CheckUnicast = false },
@@ -380,14 +376,95 @@ func TestReverseProxyFlushInterval(t *testing.T) {
 	}
 }
 
-// TODO(ro) 2017-10-10 - Didn't end up needing this, delete?
-// signURL signs urls so we can make them for our test servers.
-// func signURL(key []byte, url string) string {
-// 	oBytes := []byte(url)
-// 	mac := hmac.New(sha1.New, key)
-// 	mac.Write(oBytes)
-// 	macSum := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-// 	encodedURL := base64.RawURLEncoding.EncodeToString(oBytes)
-// 	encURL := "/" + macSum + "/" + encodedURL
-// 	return encURL
-// }
+func TestResponseFound(t *testing.T) {
+	resolver := DummyResolver{ips: []net.IP{
+		net.ParseIP("127.0.0.1"),
+	}}
+
+	tsBE := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "/unused")
+		http.Error(w, "Found", http.StatusFound)
+	}))
+
+	defer tsBE.Close()
+
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
+		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: tsBE.URL + "/lskdjf/lsdkjf"} },
+		func(p *proxy.Proxy) { p.Filter = filter.MustNewCIDR([]string{}) },
+		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
+		func(p *proxy.Proxy) { p.CheckUnicast = false },
+		func(p *proxy.Proxy) {
+			p.RedirFunc = func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+		},
+	)
+
+	ts := httptest.NewTLSServer(tut)
+	resp, err := ts.Client().Get(ts.URL + "/sldkjf/lsdkfj")
+	checkers.OK(t, err)
+	checkers.Equals(t, resp.StatusCode, http.StatusNotFound)
+
+}
+
+func TestResponseInternalError(t *testing.T) {
+	resolver := DummyResolver{ips: []net.IP{
+		net.ParseIP("127.0.0.1"),
+	}}
+
+	tsBE := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Found", http.StatusInternalServerError)
+	}))
+
+	defer tsBE.Close()
+
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
+		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: tsBE.URL + "/lskdjf/lsdkjf"} },
+		func(p *proxy.Proxy) { p.Filter = filter.MustNewCIDR([]string{}) },
+		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
+		func(p *proxy.Proxy) { p.CheckUnicast = false },
+		func(p *proxy.Proxy) {
+			p.RedirFunc = func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+		},
+	)
+
+	ts := httptest.NewTLSServer(tut)
+	resp, err := ts.Client().Get(ts.URL + "/sldkjf/lsdkfj")
+	checkers.OK(t, err)
+	checkers.Equals(t, resp.StatusCode, http.StatusBadGateway)
+}
+
+func TestResponsePayloadTooLarge(t *testing.T) {
+	resolver := DummyResolver{ips: []net.IP{
+		net.ParseIP("127.0.0.1"),
+	}}
+
+	tsBE := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hi"))
+	}))
+
+	defer tsBE.Close()
+
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
+		func(p *proxy.Proxy) { p.MaxSize = 1 },
+		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: tsBE.URL + "/lskdjf/lsdkjf"} },
+		func(p *proxy.Proxy) { p.Filter = filter.MustNewCIDR([]string{}) },
+		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
+		func(p *proxy.Proxy) { p.CheckUnicast = false },
+		func(p *proxy.Proxy) {
+			p.RedirFunc = func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+		},
+	)
+
+	ts := httptest.NewTLSServer(tut)
+	resp, err := ts.Client().Get(ts.URL + "/sldkjf/lsdkfj")
+	checkers.OK(t, err)
+	checkers.Equals(t, resp.StatusCode, http.StatusRequestEntityTooLarge)
+}
