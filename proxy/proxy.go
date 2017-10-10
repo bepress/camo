@@ -127,6 +127,12 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Split path and get components.
 	sig, encodedURL, err := p.splitComponents(r.URL.Path)
 	if err != nil {
+		// If it is not a valid signed URL, it may be a health check for the
+		// ELB. Handle that here.
+		if r.URL.Path == "/health" {
+			fmt.Fprintln(w, "OK")
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

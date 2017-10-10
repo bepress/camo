@@ -15,6 +15,22 @@ import (
 	"github.com/rs/zerolog"
 )
 
+func TestProxyHealth(t *testing.T) {
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard))
+	ts := httptest.NewTLSServer(tut)
+	client := ts.Client()
+	got, err := client.Get(ts.URL + "/health")
+	checkers.OK(t, err)
+
+	checkers.Equals(t, got.StatusCode, http.StatusOK)
+	body, err := ioutil.ReadAll(got.Body)
+	checkers.OK(t, err)
+	got.Body.Close()
+	checkers.Equals(t, string(body), "OK\n")
+
+}
+
 func TestProxyPanicsNilKey(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
