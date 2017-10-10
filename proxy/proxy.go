@@ -81,6 +81,9 @@ func MustNew(hmacKey []byte, logger zerolog.Logger, options ...func(*Proxy)) *Pr
 		Transport: p.Transport,
 		Timeout:   p.RequestTimeout,
 	}
+	if p.RedirFunc != nil {
+		p.client.CheckRedirect = p.RedirFunc
+	}
 
 	return p
 }
@@ -98,6 +101,7 @@ type Proxy struct {
 	LookupIP       ResolverFunc
 	MaxRedirects   int
 	MaxSize        int64
+	RedirFunc      func(*http.Request, []*http.Request) error
 	RequestTimeout time.Duration
 	ServerName     string
 	Transport      http.RoundTripper
@@ -139,7 +143,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	u, err := url.Parse(uStr)
 	if err != nil {
-		http.Error(w, "Invalid downstream url: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Invalid downstream URL: "+err.Error(), http.StatusForbidden)
 		return
 	}
 
