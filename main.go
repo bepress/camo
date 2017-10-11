@@ -44,7 +44,7 @@ func main() {
 		secret  = flag.String("secret", "", "The 'shared secret' hmac key")
 		tlscert = flag.String("cert", "cert.pem", "The TLS certificate to use")
 		tlskey  = flag.String("key", "key.pem", "The TLS key to use")
-		verbose = flag.Bool("verbose", false, "If verbose logging should take place (No-op at this time)")
+		verbose = flag.Bool("verbose", false, "If verbose logging should take place (No-op at this time as there's no debug log statements)")
 		version = flag.Bool("version", false, "Display version and build info, then exit")
 
 		// TODO(ro) 2017-10-10 Add flags for other proxy set-ables.
@@ -67,7 +67,16 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
-	p := proxy.MustNew([]byte(*secret), logger, func(p *proxy.Proxy) { p.MaxSize = *maxsize * 1024 * 1024 })
+	// Set up options.
+	// TODO(ro) 2017-10-11 Add more options here and as flags as necessary.
+	options := []func(*proxy.Proxy){}
+	if *maxsize > 0 {
+		options = append(options, func(p *proxy.Proxy) { p.MaxSize = *maxsize * 1024 * 1024 })
+	}
+
+	// Create proxy handler.
+	p := proxy.MustNew([]byte(*secret), logger, options...)
+	// Wrap proxy handler with logger.
 	proxyHandler := logging.NewAccessLogger(p, logger)
 	s := http.Server{Addr: *addr, Handler: proxyHandler}
 	go func() {
