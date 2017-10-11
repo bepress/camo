@@ -6,39 +6,42 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paulbellamy/ratecounter"
 	"github.com/rs/zerolog"
 )
 
 var (
 	proxyCounter *expvar.Map
-	// proxyRequests   *expvar.Int
-	// proxy400Counter *expvar.Int
-	// proxy500Counter *expvar.Int
-	// proxyCompleted  *expvar.Int
-	// proxyDuration   *expvar.Float
+	rps          *ratecounter.RateCounter
+	bps          *ratecounter.RateCounter
+	durAvg       *ratecounter.AvgRateCounter
 
-	redirCounter *expvar.Map
-	// proxyRequests   *expvar.Int
-	// proxy400Counter *expvar.Int
-	// proxy500Counter *expvar.Int
-	// proxyCompleted  *expvar.Int
-	// proxyDuration   *expvar.Float
+	bytesSecond = expvar.NewInt(bytesRate)
+	reqSecond   = expvar.NewInt(requestRate)
+	avgDuration = expvar.NewFloat(avgDur)
 )
 
 func init() {
 	proxyCounter = expvar.NewMap("proxyCounter")
-	redirCounter = expvar.NewMap("redirCounter")
+	rps = ratecounter.NewRateCounter(time.Second)
+	bps = ratecounter.NewRateCounter(time.Second)
+	durAvg = ratecounter.NewAvgRateCounter(time.Minute)
+
 }
 
 const (
 	// TimeFormat is the time format for logging.
 	TimeFormat = time.RFC3339Nano
 
+	avgDur      = "duration_1m_avg"
+	bytesRate   = "bytes_second"
+	requestRate = "requests_second"
+
 	err400    = "400"
 	err500    = "500"
 	requests  = "requests"
 	completed = "completed"
-	// duration  = "duration"
+	bytes     = "bytes_transferred"
 )
 
 // byteCounter implements an io.Writer wrapping the http.ResponseWriter to
@@ -115,5 +118,13 @@ func (al *AccessLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		proxyCounter.Add(err500, 1)
 	}
 
+	proxyCounter.Add(bytes, bc.responseBytes)
 	proxyCounter.Add(completed, 1)
+	rps.Incr(1)
+	bps.Incr(bc.responseBytes)
+	durAvg.Incr(dur.Nanoseconds())
+
+	reqSecond.Set(rps.Rate())
+	bytesSecond.Set(bps.Rate())
+	avgDuration.Set(durAvg.Rate())
 }

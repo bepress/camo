@@ -8,6 +8,12 @@
   revision = "3872ab85bb568d5400c3f53ac4d903744b2c8ea9"
 
 [[projects]]
+  name = "github.com/paulbellamy/ratecounter"
+  packages = ["."]
+  revision = "524851a93235ac051e3540563ed7909357fe24ab"
+  version = "v0.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/reedobrien/rbp"
   packages = ["."]
@@ -22,6 +28,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9c05b0db180738712fb5e4e5762b133781a1d21a348abc6d98c4989591bc1a68"
+  inputs-digest = "bc8ae116f8b9db275eb3e3375007b9e1f406a964bd09c5248b22db4a457c15ef"
   solver-name = "gps-cdcl"
   solver-version = 1

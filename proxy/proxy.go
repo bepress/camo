@@ -281,6 +281,7 @@ func (p *Proxy) buildRequest(target *url.URL, w http.ResponseWriter, r *http.Req
 	}
 	// Set the URL to the decoded target
 	out.URL = target
+	out.Host = out.URL.Host
 	out.Header = cloneHeader(r.Header) // r.WithContext does shallow copies.
 
 	// Remove hop-by-hop headers listed in the "Connection" header.
