@@ -13,8 +13,11 @@ import (
 
 	_ "expvar"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/bepress/camo/logging"
 	"github.com/bepress/camo/proxy"
+	"github.com/reedobrien/cowl"
 	"github.com/rs/zerolog"
 )
 
@@ -56,7 +59,21 @@ func main() {
 		versionInfo()
 	}
 
-	logger = logging.NewLogger(app, *verbose, nil).With().Str(
+	// Create a context so we can cancel goroutines.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // Make sure they go away when main exits.
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic("failed to get hostname")
+	}
+	// Start an aws session, and make the cloudwatchlogs service.
+	session := session.Must(session.NewSession())
+	svc := cloudwatchlogs.New(session)
+
+	// Create the cloudwatchlog writer.
+	w := cowl.MustNewWriterWithContext(ctx, svc, app, hostname+"-app")
+	// Set up the logger to use it.
+	logger = logging.NewLogger(app, *verbose, w).With().Str(
 		"handler", "proxy").Logger()
 	if BuildVersion != "" {
 		logger = logger.With().
@@ -64,6 +81,8 @@ func main() {
 			Logger()
 	}
 
+	// Stop channel to block until we get a signal. This is used for graceful
+	// shutdown.
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
@@ -79,11 +98,14 @@ func main() {
 	// Wrap proxy handler with logger.
 	proxyHandler := logging.NewAccessLogger(p, logger)
 	s := http.Server{Addr: *addr, Handler: proxyHandler}
+
+	// Start TLS server.
 	go func() {
 		if err := s.ListenAndServeTLS(*tlscert, *tlskey); err != http.ErrServerClosed {
 			logger.Fatal().Err(err).Msg("failed to start server")
 		}
 	}()
+	// Start a server on localhost:9000 for expvar.
 	go func() {
 		if err := http.ListenAndServe("127.0.0.1:9000", nil); err != nil {
 			logger.Fatal().Err(err).Msg("failed to start expvar server")
@@ -92,7 +114,9 @@ func main() {
 
 	<-stop
 
-	ctx, cancel := context.WithTimeout(context.Background(), drainTime)
+	// Create a context with timeout to limit shutdown time in the event of
+	// slow clients.
+	ctx, cancel = context.WithTimeout(ctx, drainTime)
 	defer cancel()
 
 	if err := s.Shutdown(ctx); err != nil {
