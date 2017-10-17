@@ -8,10 +8,33 @@
   revision = "3872ab85bb568d5400c3f53ac4d903744b2c8ea9"
 
 [[projects]]
+  name = "github.com/aws/aws-sdk-go"
+  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/json/jsonutil","private/protocol/jsonrpc","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/cloudwatchlogs","service/sts"]
+  revision = "6538303c6cc5d32ff3189285305b6357929d5c9b"
+  version = "v1.12.11"
+
+[[projects]]
+  name = "github.com/go-ini/ini"
+  packages = ["."]
+  revision = "5b3e00af70a9484542169a976dcab8d03e601a17"
+  version = "v1.30.0"
+
+[[projects]]
+  name = "github.com/jmespath/go-jmespath"
+  packages = ["."]
+  revision = "0b12d6b5"
+
+[[projects]]
   name = "github.com/paulbellamy/ratecounter"
   packages = ["."]
   revision = "524851a93235ac051e3540563ed7909357fe24ab"
   version = "v0.2.0"
+
+[[projects]]
+  name = "github.com/reedobrien/cowl"
+  packages = ["."]
+  revision = "6eac5f477e35d235f87323d314e2ec2a2fb4f166"
+  version = "0.1.0"
 
 [[projects]]
   branch = "master"
@@ -28,6 +51,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bc8ae116f8b9db275eb3e3375007b9e1f406a964bd09c5248b22db4a457c15ef"
+  inputs-digest = "574cf67714574bf48e71449d4890691a21438a94861773bad1f554c5fbbc6ec4"
   solver-name = "gps-cdcl"
   solver-version = 1
