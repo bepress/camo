@@ -85,7 +85,7 @@ master: build-linux
 # NB: This target is intended for CircleCI.
 # Copy the systemd unit into _workdir and make a tarball. Then copy to master
 # prefix, copy latest to previous, next to latest and this build to next.
-	cp _misc/$(PROJECT).service $(WORKDIR)
+	cp _misc/$(PROJECT).service _misc/awslogs.conf _misc/go_expvar.yaml $(WORKDIR)
 	mkdir -p $(PROJECT_DIR)/_artifacts
 	(cd $(PROJECT_DIR)/_artifacts && tar -czvf $(ARTIFACT_NAME) -C $(WORKDIR) .)
 	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/master/$(GITHASH)/$(BUILD_NUM)$(PROJECT).tar.gz
@@ -94,7 +94,7 @@ release: build-linux
 # NB: This target is intended for CircleCI.
 # Copy the systemd unit into _workdir and make a tarball. Then copy to release
 # prefix, copy latest to previous, next to latest and this release to next.
-	cp _misc/$(PROJECT).service $(WORKDIR)
+	cp _misc/$(PROJECT).service _misc/awslogs.conf _misc/go_expvar.yaml $(WORKDIR)
 	mkdir -p $(PROJECT_DIR)/_artifacts
 	(cd $(PROJECT_DIR)/_artifacts && tar -czvf $(ARTIFACT_NAME) -C $(WORKDIR) .)
 	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/release/$(GITTAGORBRANCH)-$(GITHASH)/$(BUILD_NUM)$(PROJECT).tar.gz
