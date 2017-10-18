@@ -74,4 +74,6 @@ workflows:
             - build
           filters:
             tags:
-              only: /20.*/
+              only: /^20.*/
+            branches:
+              ignore: /.*/
