@@ -98,14 +98,15 @@ release: build-linux
 	mkdir -p $(PROJECT_DIR)/_artifacts
 	(cd $(PROJECT_DIR)/_artifacts && tar -czvf $(ARTIFACT_NAME) -C $(WORKDIR) .)
 	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/release/$(GITTAGORBRANCH)-$(GITHASH)/$(BUILD_NUM)$(PROJECT).tar.gz
-	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/latest/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/previous/$(PROJECT).tar.gz || true
-	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/next/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/latest/$(PROJECT).tar.gz || true
-	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/next/$(PROJECT).tar.gz || true
+	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz || true
+
+promote_production:
+# NB: This target is intended for CircleCI.
+	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/production/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/previous/$(PROJECT).tar.gz || true
+	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/production/$(PROJECT).tar.gz || true
 
 test:
 	CGO_ENABLED=0 go test $(GOPACKAGES)
 
 test-race:
 	CGO_ENABLED=1 go test -race $(GOPACKAGES)
-
-
