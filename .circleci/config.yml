@@ -72,12 +72,11 @@ workflows:
           type: approval
           filters:
             tags:
-              only: /.*/
+              only: /^20.*/
+            branches:
+              ignore: /.*/
           requires:
             - build
       - release:
           requires:
             - hold
-          filters:
-            tags:
-              only: /.*/
