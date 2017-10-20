@@ -49,7 +49,19 @@ jobs:
 
             - store_test_results:
                 path: /tmp/test-results
-    release:
+
+    promote_staging:
+        docker:
+            - image: bepress/deploy:latest
+        working_directory: /go/src/github.com/bepress/camo
+
+        steps:
+            - checkout
+            - deploy:
+                name: Deploy to staging
+                command: make promote_staging
+
+    promote_production:
         docker:
             - image: bepress/deploy:latest
         working_directory: /go/src/github.com/bepress/camo
@@ -59,7 +71,6 @@ jobs:
             - deploy:
                 name: Deploy to production
                 command: make promote_production
-
 workflows:
   version: 2
   build-workflow:
@@ -72,16 +83,33 @@ workflows:
               only:
                 - master
                 - develop
-      - hold:
+
+      - hold_for_staging:
           type: approval
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - release:
+
+      - promote_staging:
           requires:
-            - hold
+            - hold_for_staging
+          filters:
+            tags:
+              only: /.*/
+
+      - hold_for_production:
+          type: approval
+          requires:
+            - promote_staging
+          filters:
+            tags:
+              only: /.*/
+
+      - promote_production:
+          requires:
+            - hold_for_production
           filters:
             tags:
               only: /.*/

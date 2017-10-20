@@ -77,7 +77,7 @@ lint:
 	echo "megacheck..."
 	megacheck $(GOPACKAGES)
 	echo "golint..."
-	golint -set_exit_status $(GOPACKAGES) 
+	golint -set_exit_status $(GOPACKAGES)
 	echo "go vet..."
 	go vet --all $(GOPACKAGES)
 
@@ -98,12 +98,17 @@ release: build-linux
 	mkdir -p $(PROJECT_DIR)/_artifacts
 	(cd $(PROJECT_DIR)/_artifacts && tar -czvf $(ARTIFACT_NAME) -C $(WORKDIR) .)
 	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/release/$(GITTAGORBRANCH)-$(GITHASH)/$(BUILD_NUM)$(PROJECT).tar.gz
-	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz || true
+
+promote_staging:
+# NB: This target is intended for CircleCI running a container bepress/deploy:latest
+	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/release/$(GITTAGORBRANCH)-$(GITHASH)/$(BUILD_NUM)$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz || true
+	deploy staging camo-asg camo
 
 promote_production:
-# NB: This target is intended for CircleCI.
+# NB: This target is intended for CircleCI running a container bepress/deploy:latest
 	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/production/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/previous/$(PROJECT).tar.gz || true
 	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/production/$(PROJECT).tar.gz || true
+	deploy production camo-asg camo
 
 test:
 	CGO_ENABLED=0 go test $(GOPACKAGES)
