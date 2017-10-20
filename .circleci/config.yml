@@ -76,6 +76,9 @@ workflows:
           type: approval
           requires:
             - build
+          filters:
+            tags:
+              only: /.*/
       - release:
           requires:
             - hold
