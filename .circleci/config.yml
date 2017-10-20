@@ -51,7 +51,7 @@ jobs:
                 path: /tmp/test-results
     release:
         docker:
-            - image: reed/leche:latest
+            - image: bepress/deploy:latest
         working_directory: /go/src/github.com/bepress/camo
 
         steps:
