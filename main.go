@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -71,7 +72,9 @@ func main() {
 	svc := cloudwatchlogs.New(session)
 
 	// Create the cloudwatchlog writer.
-	w := cowl.MustNewWriterWithContext(ctx, svc, app, hostname+"-app")
+	cwl := cowl.MustNewWriterWithContext(ctx, svc, app, hostname+"-app")
+	// Write to both stdout and cwl.
+	w := io.MultiWriter(cwl, os.Stdout)
 	// Set up the logger to use it.
 	logger = logging.NewLogger(app, *verbose, w).With().Str(
 		"handler", "proxy").Logger()
