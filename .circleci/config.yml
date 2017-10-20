@@ -82,3 +82,6 @@ workflows:
       - release:
           requires:
             - hold
+          filters:
+            tags:
+              only: /.*/
