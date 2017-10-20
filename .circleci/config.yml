@@ -49,16 +49,16 @@ jobs:
 
             - store_test_results:
                 path: /tmp/test-results
-
     release:
-      docker:
-          - image: reed/leche:latest
-      working_directory: /go/src/github.com/bepress/camo
+        docker:
+            - image: reed/leche:latest
+        working_directory: /go/src/github.com/bepress/camo
 
-      steps:
-        - deploy:
-            name: Deploy to production
-            command: make promote_production
+        steps:
+            - checkout
+            - deploy:
+                name: Deploy to production
+                command: make promote_production
 
 workflows:
   version: 2
@@ -68,12 +68,15 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - release:
+      - hold:
           type: approval
+          filters:
+            tags:
+              only: /^20.*/
+            branches:
+              ignore: /.*/
           requires:
             - build
-          filters:
-            branches:
-              only: master
-            tags:
-              only: /20.*/
+      - release:
+          requires:
+            - hold
