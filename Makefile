@@ -98,10 +98,11 @@ release: build-linux
 	mkdir -p $(PROJECT_DIR)/_artifacts
 	(cd $(PROJECT_DIR)/_artifacts && tar -czvf $(ARTIFACT_NAME) -C $(WORKDIR) .)
 	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/release/$(GITTAGORBRANCH)-$(GITHASH)/$(BUILD_NUM)$(PROJECT).tar.gz
+	aws s3 cp $(ARTIFACT_DIR)/$(ARTIFACT_NAME) s3://$(ARTIFACT_BUCKET)/$(PROJECT)/development/$(PROJECT).tar.gz
 
 promote_staging:
 # NB: This target is intended for CircleCI running a container bepress/deploy:latest
-	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/release/$(GITTAGORBRANCH)-$(GITHASH)/$(BUILD_NUM)$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz || true
+	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/development/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz || true
 	deploy staging camo-asg camo
 
 promote_production:
