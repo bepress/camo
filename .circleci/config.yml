@@ -68,15 +68,20 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              only:
+                - master
+                - develop
       - hold:
           type: approval
-          filters:
-            tags:
-              only: /^20.*/
-            branches:
-              ignore: /.*/
           requires:
             - build
+          filters:
+            tags:
+              only: /.*/
       - release:
           requires:
             - hold
+          filters:
+            tags:
+              only: /.*/
