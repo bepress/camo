@@ -67,7 +67,7 @@ workflows:
       - build:
           filters:
             tags:
-              only: /.*/
+              only: /^20.*/
       - hold:
           type: approval
           filters:
