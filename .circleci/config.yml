@@ -67,11 +67,6 @@ workflows:
       - build
       - hold:
           type: approval
-          filters:
-            tags:
-              only: /^20.*/
-            branches:
-              ignore: /.*/
           requires:
             - build
       - release:
