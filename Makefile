@@ -13,7 +13,7 @@ ARCH            := $(shell go env GOARCH)
 
 GITHASH         :=$(shell git rev-parse --short HEAD)
 GITBRANCH       :=$(shell git rev-parse --abbrev-ref HEAD)
-GITTAGORBRANCH 	:=$(shell sh -c 'git describe --always --dirty --tags 2>/dev/null')
+GITTAGORBRANCH 	:=$(shell sh -c 'git describe --always --dirty 2>/dev/null')
 BUILDDATE      	:=$(shell date -u +%Y%m%d%H%M)
 GO_LDFLAGS		?= -s -w
 GO_BUILD_FLAGS  :=-ldflags "${GOLDFLAGS} -X main.BuildVersion=${GITTAGORBRANCH} -X main.GitHash=${GITHASH} -X main.GitBranch=${GITBRANCH} -X main.BuildDate=${BUILDDATE}"
