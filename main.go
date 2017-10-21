@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -71,7 +73,9 @@ func main() {
 	svc := cloudwatchlogs.New(session)
 
 	// Create the cloudwatchlog writer.
-	w := cowl.MustNewWriterWithContext(ctx, svc, app, hostname+"-app")
+	cwl := cowl.MustNewWriterWithContext(ctx, svc, app, hostname+"-app")
+	// Write to both stdout and cwl.
+	w := io.MultiWriter(cwl, os.Stdout)
 	// Set up the logger to use it.
 	logger = logging.NewLogger(app, *verbose, w).With().Str(
 		"handler", "proxy").Logger()
@@ -80,6 +84,9 @@ func main() {
 			Str("app_version", BuildVersion+"-"+GitHash).
 			Logger()
 	}
+
+	stdlog.SetFlags(0)
+	stdlog.SetOutput(logger)
 
 	// Stop channel to block until we get a signal. This is used for graceful
 	// shutdown.
