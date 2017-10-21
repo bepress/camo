@@ -2,13 +2,13 @@
 Description=TLS asset proxy for non TLS assets
 ConditionPathExists=/usr/local/bin/camo
 After=network.target
-EnvironmentFile=/var/camo/env
 
 [Service]
 Type=simple
 User=camo
 Group=camo
 LimitNOFILE=500000
+EnvironmentFile=/var/camo/env
 
 Restart=on-failure
 RestartSec=10

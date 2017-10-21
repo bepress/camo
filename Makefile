@@ -77,7 +77,7 @@ lint:
 	echo "megacheck..."
 	megacheck $(GOPACKAGES)
 	echo "golint..."
-	golint -set_exit_status $(GOPACKAGES) 
+	golint -set_exit_status $(GOPACKAGES)
 	echo "go vet..."
 	go vet --all $(GOPACKAGES)
 
