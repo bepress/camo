@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -83,6 +84,9 @@ func main() {
 			Str("app_version", BuildVersion+"-"+GitHash).
 			Logger()
 	}
+
+	stdlog.SetFlags(0)
+	stdlog.SetOutput(logger)
 
 	// Stop channel to block until we get a signal. This is used for graceful
 	// shutdown.
