@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -113,7 +114,7 @@ type Proxy struct {
 	DisableKeepAlivesFE bool
 }
 
-// ServeHTTP implements HandlerFunc
+// ServeHTTP implements HandlerFunc.
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.setResponseHeaders(w)
 
@@ -137,24 +138,28 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, "OK")
 			return
 		}
+		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Decode the URL.
 	uStr, err := p.Decoder.Decode(sig, encodedURL)
 	if err != nil {
+		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
 	u, err := url.Parse(uStr)
 	if err != nil {
+		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, "Invalid downstream URL: "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	// Validate the target host
 	if err = p.validateTarget(u); err != nil {
+		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, "invalid host: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -162,6 +167,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Build the request for downstream.
 	outreq, err := p.buildRequest(u, w, r)
 	if err != nil {
+		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -169,9 +175,18 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Perform the request.
 	resp, err := p.client.Do(outreq)
 	if err != nil {
+		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, fmt.Sprintf("error processing request: %q", err), http.StatusInternalServerError)
 		return
 	}
+
+	// Log information about the upstream request/response.
+	p.logger.Info().
+		Str("upstream_domain", outreq.Host).
+		Int("upstream_response", resp.StatusCode).
+		Str("upstream_path", outreq.URL.Path).
+		Str("content_type", resp.Header.Get("Content-Type")).
+		Int64("content_length", resp.ContentLength).Msg("")
 
 	defer resp.Body.Close()
 
@@ -323,6 +338,7 @@ func (p *Proxy) buildRequest(target *url.URL, w http.ResponseWriter, r *http.Req
 	// original request to our server.
 	out.RequestURI = ""
 
+	// TODO(ro) 2017-10-21 Can we actually return an error here? I don't see it in the current read through. If not remove it from the function signature.
 	return out, nil
 }
 
@@ -475,3 +491,8 @@ func (m *maxLatencyWriter) flushLoop() {
 }
 
 func (m *maxLatencyWriter) stop() { m.done <- true }
+
+func errDetails() string {
+	pc, fn, line, _ := runtime.Caller(1)
+	return fmt.Sprintf("[error] in %s[%s:%d]", runtime.FuncForPC(pc).Name(), fn, line)
+}
