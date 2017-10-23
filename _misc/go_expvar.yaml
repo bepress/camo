@@ -12,36 +12,27 @@ instances:
   #  * rate (note that this will show up as a gauge in Datadog that is meant to be seen as a "per second rate")
 
   - expvar_url: http://localhost:9000
-    namespace: camo         # The default metric namespace is 'go_expvar', define your own
+    # namespace: camo         # The default metric namespace is 'go_expvar', define your own
     tags:
       - "app:sequoia"
       - "service:camo"
     metrics:
       - path: requests_second
-        alias: camo.requests_second
         type: rate
       - path: bytes_second
-        alias: camo.bytes_second
         type: rate
       - path: duration_1m_avg
-        alias: camo.duration_1m_avg
         type: rate
       - path: proxyCounter/bytes_transferred
-        alias: camo.bytes_transferred
         type: counter
       - path: proxyCounter/requests
-        alias: camo.requests
         type: counter
       - path: proxyCounter/completed
-        alias: camo.completed
         type: counter
       - path: proxyCounter/404
-        alias: camo.404
         type: counter
       - path: proxyCounter/400
-        alias: camo.400
         type: counter
       - path: proxyCounter/500
-        alias: camo.500
         type: counter
 
