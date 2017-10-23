@@ -68,10 +68,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-            branches:
-              only:
-                - master
-                - develop
       - hold:
           type: approval
           requires:
@@ -79,9 +75,15 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              only:
+                - master
       - release:
           requires:
             - hold
           filters:
             tags:
               only: /.*/
+            branches:
+              only:
+                - master
