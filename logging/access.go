@@ -68,6 +68,7 @@ func (ar *byteCounter) WriteHeader(status int) {
 
 // NewAccessLogger returns a constructed AccessLogger pointer.
 func NewAccessLogger(handler http.Handler, logger zerolog.Logger) http.Handler {
+	logger = logger.With().Str("type", "access").Logger()
 	return &AccessLogger{
 		handler: handler,
 		logger:  logger,
