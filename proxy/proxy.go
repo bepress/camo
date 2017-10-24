@@ -196,7 +196,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch resp.StatusCode {
-	case 200, 304, 410:
+	case 200, 206, 304, 410:
 		p.buildResponse(w, resp)
 		return
 	case 301, 302, 303, 307:
