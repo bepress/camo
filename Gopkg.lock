@@ -33,8 +33,8 @@
 [[projects]]
   name = "github.com/reedobrien/cowl"
   packages = ["."]
-  revision = "e4ee5ed3010f7441d7efd7f1cb6b2cdaf941186c"
-  version = "0.2.2"
+  revision = "c965be2fef35a3aeb23b214034fc9c7e35dac400"
+  version = "0.2.3"
 
 [[projects]]
   branch = "master"
