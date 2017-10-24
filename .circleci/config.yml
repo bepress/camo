@@ -41,6 +41,7 @@ jobs:
                     fi
                     if [ -n "${CIRCLE_TAG}" ]; then
                         make release
+                        make deploy_staging
                     fi
 
             - store_artifacts:
@@ -51,14 +52,16 @@ jobs:
                 path: /tmp/test-results
     release:
         docker:
-            - image: reed/leche:latest
-        working_directory: /go/src/github.com/bepress/camo
+            - image: bepress/deploy:latest
+        working_directory: /tmp/
 
         steps:
             - checkout
             - deploy:
                 name: Deploy to production
-                command: make promote_production
+                command: |
+                    make promote_production
+                    make deploy_production
 
 workflows:
   version: 2

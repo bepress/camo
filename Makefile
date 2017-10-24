@@ -105,6 +105,14 @@ promote_production:
 	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/production/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/previous/$(PROJECT).tar.gz || true
 	aws s3 cp s3://$(ARTIFACT_BUCKET)/$(PROJECT)/staging/$(PROJECT).tar.gz s3://$(ARTIFACT_BUCKET)/$(PROJECT)/production/$(PROJECT).tar.gz || true
 
+deploy_staging:
+# NB: This target is intended for CircleCI.
+	deploy staging camo-asg camo --account-id=628855009903
+
+deploy_production:
+# NB: This target is intended for CircleCI.
+	deploy production camo-asg camo --account-id=596234948724
+
 test:
 	CGO_ENABLED=0 go test $(GOPACKAGES)
 
