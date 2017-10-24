@@ -57,7 +57,7 @@ jobs:
         steps:
             - checkout
             - deploy:
-                name: Deploy to production
+                name: Deploy to staging
                 command: make deploy_staging
     release_production:
         docker:
