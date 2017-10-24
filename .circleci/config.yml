@@ -77,16 +77,14 @@ workflows:
             - build
           filters:
             tags:
-              only: /.*/
+              only: /20.*/
             branches:
-              only:
-                - master
+              ignore: /.*/
       - release:
           requires:
             - hold
           filters:
             tags:
-              only: /.*/
+              only: /20.*/
             branches:
-              only:
-                - master
+              ignore: /.*/
