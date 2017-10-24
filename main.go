@@ -73,7 +73,7 @@ func main() {
 	svc := cloudwatchlogs.New(session)
 
 	// Create the cloudwatchlog writer.
-	cwl := cowl.MustNewWriterWithContext(ctx, svc, app, hostname+"-app")
+	cwl := cowl.MustNewWriterWithContext(ctx, svc, app, "app-"+hostname)
 	// Write to both stdout and cwl.
 	w := io.MultiWriter(cwl, os.Stdout)
 	// Set up the logger to use it.
