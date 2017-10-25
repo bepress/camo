@@ -111,7 +111,13 @@ func main() {
 	p := proxy.MustNew([]byte(*secret), logger, options...)
 	// Wrap proxy handler with logger.
 	proxyHandler := logging.NewAccessLogger(p, logger)
-	s := http.Server{Addr: *addr, Handler: proxyHandler}
+	s := http.Server{
+		Addr:         *addr,
+		Handler:      proxyHandler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
 
 	// Start TLS server.
 	go func() {
