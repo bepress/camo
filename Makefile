@@ -7,7 +7,7 @@ PROJECT			=camo
 PROJECT_DIR		=$(shell pwd)
 
 GOFILES         :=$(shell find . -name '*.go' -not -path './vendor/*')
-GOPACKAGES      :=$(shell go list ./... | grep -v /vendor/| grep -v /checkers)
+GOPACKAGES      :=$(shell go list ./... | grep -v /vendor/| grep -v /checkers | grep -v /e2e)
 OS              := $(shell go env GOOS)
 ARCH            := $(shell go env GOARCH)
 
@@ -118,3 +118,6 @@ test:
 
 test-race:
 	CGO_ENABLED=1 go test -race $(GOPACKAGES)
+
+test-e2e:
+	CGO_ENABLED=0 go test github.com/bepress/camo/e2e

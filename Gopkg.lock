@@ -48,9 +48,51 @@
   revision = "3ac71fc58dbd43122668a912b755b0979ba9ce1f"
   version = "v1.3.0"
 
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonpointer"
+  packages = ["."]
+  revision = "6fe8760cad3569743d51ddbb243b26f8456742dc"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonreference"
+  packages = ["."]
+  revision = "e02fc20de94c78484cd5ffb007f8af96be030a45"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonschema"
+  packages = ["."]
+  revision = "212d8a0df7acfab8bdd190a7a69f0ab7376edcc8"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = ["idna","publicsuffix"]
+  revision = "4b14673ba32bee7f5ac0f990a48f033919fd418b"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/text"
+  packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
+  revision = "6eab0e8f74e86c598ec3b6fad4888e0c11482d48"
+
+[[projects]]
+  name = "gopkg.in/h2non/baloo.v3"
+  packages = [".","assert"]
+  revision = "bcac7e061d45d1443121ab1868b8907c0d233f38"
+  version = "v3.0.0"
+
+[[projects]]
+  name = "gopkg.in/h2non/gentleman.v2"
+  packages = [".","context","middleware","mux","plugin","plugins/body","plugins/bodytype","plugins/cookies","plugins/headers","plugins/multipart","plugins/query","plugins/url","utils"]
+  revision = "e0f81be2f4064ea7aa7470e9daddd2dc8e8152c7"
+  version = "v2.0.3"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "574cf67714574bf48e71449d4890691a21438a94861773bad1f554c5fbbc6ec4"
+  inputs-digest = "cfbec63c624fae472c5fac25f72c168d2b7972ff8b4338e68e4c6d7f15e8a1be"
   solver-name = "gps-cdcl"
   solver-version = 1
