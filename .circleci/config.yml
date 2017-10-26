@@ -59,6 +59,30 @@ jobs:
             - deploy:
                 name: Deploy to staging
                 command: make deploy_staging
+
+    check_staging:
+        docker:
+            # This image for leche is just go1.9 with python and aws cli
+            # installed. So ignore the name for now and we'll make a
+            # generically named bepress image RSN™.
+            - image: reed/leche:latest
+        working_directory: /go/src/github.com/bepress/camo
+
+        environment:
+            TEST_RESULTS: /tmp/test-results
+
+        steps:
+            - checkout
+            - run:
+                name: Get packages
+                command: |
+                  make dependencies
+
+            - run:
+                name: Test Camo in staging
+                command: |
+                  make test-e2e
+
     release_production:
         docker:
             - image: bepress/deploy:latest
@@ -80,6 +104,7 @@ workflows:
           filters:
             tags:
               only: /.*/
+
       - release_staging:
           requires:
             - build
@@ -88,15 +113,26 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
+
+      - check_staging:
+          requires:
+            - release_staging
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+
       - hold:
           type: approval
           requires:
-            - release_staging
+            - check_staging
           filters:
             tags:
               only: /20.*/
             branches:
               ignore: /.*/
+
       - release_production:
           requires:
             - hold
