@@ -5,7 +5,6 @@
 
 PROJECT			=camo
 PROJECT_DIR		=$(shell pwd)
-
 GOFILES         :=$(shell find . -name '*.go' -not -path './vendor/*')
 GOPACKAGES      :=$(shell go list ./... | grep -v /vendor/| grep -v /checkers)
 OS              := $(shell go env GOOS)
@@ -31,6 +30,7 @@ ARTIFACT_BUCKET :="artifacts.production.bepress.com"
 ARTIFACT_NAME   :=$(PROJECT)-$(GITTAGORBRANCH)-$(GITHASH).tar.gz
 ARTIFACT_DIR    :=$(PROJECT_DIR)/_artifacts
 WORKDIR         :=$(PROJECT_DIR)/_workdir
+E2E_TEST_DIR    :=$(PROJECT_DIR)/_e2e_tests
 
 default: build-linux
 
@@ -43,6 +43,7 @@ build:
 clean:
 	rm -f $(WORKDIR)/*
 	rm -f $(ARTIFACT_DIR)/*
+	rm -f $(E2E_TEST_DIR)/*
 	rm -rf .cover
 	go clean -r
 
@@ -112,6 +113,14 @@ deploy_staging:
 deploy_production:
 # NB: This target is intended for CircleCI.
 	deploy production camo-asg camo --account-id=596234948724
+
+download_e2e_tests:
+	mkdir -p $(E2E_TEST_DIR)
+	aws s3 cp s3://$(ARTIFACT_BUCKET)/e2e_tests/production/e2e_tests.tar.gz $(E2E_TEST_DIR)/e2e_tests.tar.gz
+	(cd $(E2E_TEST_DIR) && tar -xzf $(E2E_TEST_DIR)/e2e_tests.tar.gz)
+
+e2e_tests:
+	$(E2E_TEST_DIR)/e2e_tests_camo_linux_amd64
 
 test:
 	CGO_ENABLED=0 go test $(GOPACKAGES)
