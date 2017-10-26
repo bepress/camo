@@ -2,6 +2,7 @@
 Description=TLS asset proxy for non TLS assets
 ConditionPathExists=/usr/local/bin/camo
 After=network.target
+StartLimitIntervalSec=60
 
 [Service]
 Type=simple
@@ -12,7 +13,6 @@ EnvironmentFile=/var/camo/env
 
 Restart=on-failure
 RestartSec=10
-startLimitIntervalSec=60
 
 WorkingDirectory=/var/camo
 ExecStart=/usr/local/bin/camo -secret SHAREDSECRETKEY
