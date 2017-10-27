@@ -72,7 +72,13 @@ func MustNew(hmacKey []byte, logger zerolog.Logger, options ...func(*Proxy)) *Pr
 			DialContext: (&net.Dialer{
 				Timeout:   3 * time.Second,
 				KeepAlive: 30 * time.Second}).DialContext,
-			TLSHandshakeTimeout: 3 * time.Second,
+			// Timeouts
+			ExpectContinueTimeout: 1 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			TLSHandshakeTimeout:   3 * time.Second,
+			IdleConnTimeout:       30 * time.Second,
+
+			MaxIdleConns:        300,
 			MaxIdleConnsPerHost: 8,
 			DisableKeepAlives:   p.DisableKeepAlivesBE,
 		}

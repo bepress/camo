@@ -44,15 +44,18 @@ var (
 
 func main() {
 	var (
-		addr    = flag.String("addr", ":443", "The address and port to listen on")
-		maxsize = flag.Int64("maxsize", 5, "Maximum size to proxy in whole MB (no decimal)")
-		secret  = flag.String("secret", "", "The 'shared secret' hmac key")
-		tlscert = flag.String("cert", "cert.pem", "The TLS certificate to use")
-		tlskey  = flag.String("key", "key.pem", "The TLS key to use")
-		verbose = flag.Bool("verbose", false, "If verbose logging should take place (No-op at this time as there's no debug log statements)")
-		version = flag.Bool("version", false, "Display version and build info, then exit")
+		addr        = flag.String("addr", ":443", "The address and port to listen on")
+		flushPeriod = flag.Duration("flushPeriod", 10*time.Second, "The maximum period to wait before flushing")
+		flushSize   = flag.Int("flushSize", 7000, "The maximum size the log buffer may reach before flushing")
+		maxsize     = flag.Int64("maxsize", 5, "Maximum size to proxy in whole MB (no decimal)")
+		secret      = flag.String("secret", "", "The 'shared secret' hmac key")
+		tlscert     = flag.String("cert", "cert.pem", "The TLS certificate to use")
+		tlskey      = flag.String("key", "key.pem", "The TLS key to use")
+		verbose     = flag.Bool("verbose", false, "If verbose logging should take place (No-op at this time as there's no debug log statements)")
+		version     = flag.Bool("version", false, "Display version and build info, then exit")
 
 		// TODO(ro) 2017-10-10 Add flags for other proxy set-ables.
+
 		logger zerolog.Logger
 	)
 	flag.Parse()
@@ -73,7 +76,11 @@ func main() {
 	svc := cloudwatchlogs.New(session)
 
 	// Create the cloudwatchlog writer.
-	cwl := cowl.MustNewWriterWithContext(ctx, svc, app, "app-"+hostname)
+	cwlOpts := []func(*cowl.Writer){
+		func(w *cowl.Writer) { w.FlushPeriod = *flushPeriod },
+		func(w *cowl.Writer) { w.FlushSize = *flushSize },
+	}
+	cwl := cowl.MustNewWriterWithContext(ctx, svc, app, "app-"+hostname, cwlOpts...)
 	// Write to both stdout and cwl.
 	w := io.MultiWriter(cwl, os.Stdout)
 	// Set up the logger to use it.
@@ -104,7 +111,13 @@ func main() {
 	p := proxy.MustNew([]byte(*secret), logger, options...)
 	// Wrap proxy handler with logger.
 	proxyHandler := logging.NewAccessLogger(p, logger)
-	s := http.Server{Addr: *addr, Handler: proxyHandler}
+	s := http.Server{
+		Addr:         *addr,
+		Handler:      proxyHandler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
 
 	// Start TLS server.
 	go func() {

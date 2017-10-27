@@ -38,6 +38,7 @@ const (
 	requestRate = "requests_second"
 
 	err400    = "400"
+	err404    = "404"
 	err500    = "500"
 	requests  = "requests"
 	completed = "completed"
@@ -112,7 +113,7 @@ func (al *AccessLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case bc.status == 404:
-		proxyCounter.Add("404", 1)
+		proxyCounter.Add(err404, 1)
 	case bc.status > 399 && bc.status < 500:
 		proxyCounter.Add(err400, 1)
 	case bc.status > 499:
