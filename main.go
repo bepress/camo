@@ -17,6 +17,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/bepress/camo/helpers"
 	"github.com/bepress/camo/logging"
 	"github.com/bepress/camo/proxy"
 	"github.com/reedobrien/cowl"
@@ -57,6 +58,7 @@ func main() {
 		// TODO(ro) 2017-10-10 Add flags for other proxy set-ables.
 
 		logger zerolog.Logger
+		hmac   string
 	)
 	flag.Parse()
 
@@ -67,10 +69,12 @@ func main() {
 	// Create a context so we can cancel goroutines.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // Make sure they go away when main exits.
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		panic("failed to get hostname")
 	}
+
 	// Start an aws session, and make the cloudwatchlogs service.
 	session := session.Must(session.NewSession())
 	svc := cloudwatchlogs.New(session)
@@ -81,8 +85,10 @@ func main() {
 		func(w *cowl.Writer) { w.FlushSize = *flushSize },
 	}
 	cwl := cowl.MustNewWriterWithContext(ctx, svc, app, "app-"+hostname, cwlOpts...)
+
 	// Write to both stdout and cwl.
 	w := io.MultiWriter(cwl, os.Stdout)
+
 	// Set up the logger to use it.
 	logger = logging.NewLogger(app, *verbose, w).With().Str(
 		"handler", "proxy").Logger()
@@ -108,7 +114,8 @@ func main() {
 	}
 
 	// Create proxy handler.
-	p := proxy.MustNew([]byte(*secret), logger, options...)
+	hmac = helpers.GetHMAC(*secret)
+	p := proxy.MustNew([]byte(hmac), logger, options...)
 	// Wrap proxy handler with logger.
 	proxyHandler := logging.NewAccessLogger(p, logger)
 	s := http.Server{
