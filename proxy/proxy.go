@@ -88,11 +88,25 @@ func MustNew(hmacKey []byte, logger zerolog.Logger, options ...func(*Proxy)) *Pr
 		Transport: p.Transport,
 		Timeout:   p.RequestTimeout,
 	}
-	if p.RedirFunc != nil {
-		p.client.CheckRedirect = p.RedirFunc
+	if p.RedirFunc == nil {
+		p.RedirFunc = p.checkRedirect
 	}
+	p.client.CheckRedirect = p.RedirFunc
 
 	return p
+}
+
+// CheckRedirect implments the redirect manager for http.Client
+func (p *Proxy) checkRedirect(r *http.Request, via []*http.Request) error {
+	if err := p.validateTarget(r.URL); err != nil {
+		return err
+	}
+
+	if len(via) >= p.MaxRedirects {
+		return fmt.Errorf("stopped after %d redirects", p.MaxRedirects)
+	}
+	return nil
+
 }
 
 // ResolverFunc is the net.LookupIP signature so we can fake it in tests.
