@@ -76,6 +76,78 @@ func TestProxyWithOptions(t *testing.T) {
 	checkers.Equals(t, got, "http://example.com/someurl")
 }
 
+func TestRedirectFilters(t *testing.T) {
+	table := []struct {
+		hostIP  string
+		decoded string
+	}{
+		{"10.1.101.1", "http://example.com/nonroutable"},
+		{"127.0.0.1", "http://example.com/localhost"},
+		{"192.168.1.1", "http://example.com/nonroutable"},
+		{"169.254.169.254", "http://example.com/awsmdserver"},
+		{"10.100.1.1", "http://example.com/ourcidr"},
+	}
+
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
+	)
+
+	for _, test := range table {
+		resolver := DummyResolver{ips: []net.IP{
+			net.ParseIP(test.hostIP),
+		}}
+
+		tut.LookupIP = resolver.LookupIP
+
+		req, err := http.NewRequest("GET", test.decoded, nil)
+		checkers.OK(t, err)
+
+		err = tut.RedirFunc(req, []*http.Request{})
+		checkers.Equals(t, err.Error(), fmt.Sprintf("filtered host address: %q", test.hostIP))
+	}
+
+}
+
+func TestMaxRedirects(t *testing.T) {
+	resolver := DummyResolver{ips: []net.IP{
+		net.ParseIP("10.1.10.1"),
+	}}
+
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
+		func(p *proxy.Proxy) { p.MaxRedirects = 1 },
+		func(p *proxy.Proxy) { p.Filter = filter.MustNewCIDR([]string{}) },
+		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
+	)
+
+	r, err := http.NewRequest("GET", "http://example.com/foo", nil)
+	checkers.OK(t, err)
+
+	err = tut.RedirFunc(r, []*http.Request{r, r})
+	checkers.Equals(t, err.Error(), "stopped after 1 redirects")
+
+}
+
+func TestRedirectsOK(t *testing.T) {
+	resolver := DummyResolver{ips: []net.IP{
+		net.ParseIP("10.1.10.1"),
+	}}
+
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard),
+		func(p *proxy.Proxy) { p.MaxRedirects = 1 },
+		func(p *proxy.Proxy) { p.Filter = filter.MustNewCIDR([]string{}) },
+		func(p *proxy.Proxy) { p.LookupIP = resolver.LookupIP },
+	)
+
+	r, err := http.NewRequest("GET", "http://example.com/foo", nil)
+	checkers.OK(t, err)
+
+	err = tut.RedirFunc(r, []*http.Request{})
+	checkers.OK(t, err)
+
+}
+
 func TestAllowedMethods(t *testing.T) {
 	table := []struct {
 		signedURI   string
