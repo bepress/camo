@@ -3,10 +3,10 @@ package logging_test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/bepress/camo/checkers"
@@ -16,20 +16,21 @@ import (
 
 func TestAccessLogger(t *testing.T) {
 	table := []struct {
-		desc      string
-		host      string
-		method    string
-		uri       string
-		protocol  string
-		status    int
-		response  string
-		referrer  string
-		userAgent string
+		desc         string
+		host         string
+		method       string
+		uri          string
+		protocol     string
+		status       int
+		response     string
+		referrer     string
+		userAgent    string
+		forwardedFor string
 	}{
-		{"test 1", "example.com", "GET", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1"},
-		{"test POST path only", "example.com", "POST", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1"},
-		{"test GET path with query", "www.example.com", "GET", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1"},
-		{"test GET path with query", "www.example.com", "POST", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1"},
+		{"test 1", "example.com", "GET", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1"},
+		{"test POST path only", "example.com", "POST", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1, 192.168.1.1"},
+		{"test GET path with query", "www.example.com", "GET", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1, 172.16.0.1, 192.168.4.5"},
+		{"test GET path with query", "www.example.com", "POST", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", ""},
 	}
 
 	out := &bytes.Buffer{}
@@ -47,13 +48,14 @@ func TestAccessLogger(t *testing.T) {
 		out.Reset()
 		ts := httptest.NewServer(logging.NewAccessLogger(http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, string(test.response))
+				w.Write([]byte(test.response))
 			}), logger))
 		defer ts.Close()
 
 		req, err := http.NewRequest(test.method, ts.URL+test.uri, nil)
 		checkers.OK(t, err)
 		req.Header.Add("Referer", test.referrer)
+		req.Header.Add("X-Forwarded-For", test.forwardedFor)
 		req.Host = test.host
 
 		res, err := client.Do(req)
@@ -62,7 +64,7 @@ func TestAccessLogger(t *testing.T) {
 		b, err := ioutil.ReadAll(res.Body)
 		checkers.OK(t, err)
 		defer res.Body.Close()
-		checkers.Equals(t, string(b), test.response+"\n")
+		checkers.Equals(t, string(b), test.response)
 
 		got := &proxyLogRecord{}
 		err = json.Unmarshal(out.Bytes(), got)
@@ -74,24 +76,26 @@ func TestAccessLogger(t *testing.T) {
 		checkers.Equals(t, got.Referrer, test.referrer)
 		checkers.Equals(t, got.Domain, test.host)
 		checkers.Equals(t, got.ClientIP, "127.0.0.1")
-		checkers.Equals(t, got.ReponseBytes, len(test.response)+1)
+		checkers.Equals(t, got.ReponseBytes, len(test.response))
+		checkers.Equals(t, got.XForwardedFor, strings.Split(test.forwardedFor, ", "))
 	}
 
 }
 
 type proxyLogRecord struct {
-	Time         string  `json:"time"`
-	Level        string  `json:"level"`
-	App          string  `json:"app"`
-	AppHost      string  `json:"app_host"`
-	ClientIP     string  `json:"client_ip"`
-	Duration     float64 `json:"duration"`
-	Domain       string  `json:"domain"`
-	Method       string  `json:"method"`
-	URI          string  `json:"uri"`
-	Protocol     string  `json:"protocol"`
-	Status       int     `json:"status"`
-	ReponseBytes int     `json:"reponse_bytes"`
-	Referrer     string  `json:"referrer"`
-	UserAgent    string  `json:"user_agent"`
+	Time          string   `json:"time"`
+	Level         string   `json:"level"`
+	App           string   `json:"app"`
+	AppHost       string   `json:"app_host"`
+	ClientIP      string   `json:"client_ip"`
+	Duration      float64  `json:"duration"`
+	Domain        string   `json:"domain"`
+	Method        string   `json:"method"`
+	URI           string   `json:"uri"`
+	Protocol      string   `json:"protocol"`
+	Status        int      `json:"status"`
+	ReponseBytes  int      `json:"reponse_bytes"`
+	Referrer      string   `json:"referrer"`
+	UserAgent     string   `json:"user_agent"`
+	XForwardedFor []string `json:"x_forwarded_for"`
 }
