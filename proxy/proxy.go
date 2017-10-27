@@ -352,7 +352,8 @@ func (p *Proxy) buildRequest(target *url.URL, w http.ResponseWriter, r *http.Req
 // ensure is is a global unicast address.
 func (p *Proxy) validateTarget(u *url.URL) error {
 	// filter out rejected networks
-	ips, err := p.LookupIP(u.Host)
+	host := strings.Split(u.Host, ":")[0]
+	ips, err := p.LookupIP(host)
 	if err != nil {
 		return err
 	}
