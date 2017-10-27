@@ -99,8 +99,10 @@ func (al *AccessLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	al.handler.ServeHTTP(bc, r)
 	dur := time.Since(start)
+
 	al.logger.Info().
 		Str("client_ip", clientIP).
+		Strs("x_forwarded_for", strings.Split(r.Header.Get("X-Forwarded-For"), ", ")).
 		Dur("duration", dur).
 		Str("domain", r.Host).
 		Str("method", r.Method).
