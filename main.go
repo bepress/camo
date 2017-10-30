@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	stdlog "log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +16,7 @@ import (
 
 	_ "expvar"
 
+	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/bepress/camo/helpers"
@@ -128,7 +130,20 @@ func main() {
 
 	// Start TLS server.
 	go func() {
-		if err := s.ListenAndServeTLS(*tlscert, *tlskey); err != http.ErrServerClosed {
+		// Create a generic TCP listener
+		ln, err := net.Listen("tcp", s.Addr)
+		if err != nil {
+			logger.Fatal().Err(err).Msgf("failed to get listener on addr %s", s.Addr)
+			panic(err)
+		}
+		// Wrap it in a proxy proto listener.
+		ppln := &proxyproto.Listener{
+			Listener:           ln,
+			ProxyHeaderTimeout: time.Second, // s.ProxyHeaderTimeout,
+		}
+
+		// Serve using our listener.
+		if err := s.ServeTLS(ppln, *tlscert, *tlskey); err != http.ErrServerClosed {
 			logger.Fatal().Err(err).Msg("failed to start server")
 		}
 	}()
