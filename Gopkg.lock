@@ -3,6 +3,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/armon/go-proxyproto"
+  packages = ["."]
+  revision = "48572f11356f1843b694f21a290d4f1006bc5e47"
+
+[[projects]]
+  branch = "master"
   name = "github.com/asergeyev/nradix"
   packages = ["."]
   revision = "3872ab85bb568d5400c3f53ac4d903744b2c8ea9"
@@ -51,6 +57,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "574cf67714574bf48e71449d4890691a21438a94861773bad1f554c5fbbc6ec4"
+  inputs-digest = "71866294c9993aade55a6cdb91d068a36710bf1eaf6aaae1021482d27ecf4b87"
   solver-name = "gps-cdcl"
   solver-version = 1
