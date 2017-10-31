@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -38,6 +39,10 @@ const (
 	//DefaultKAFE is the default keepalives setting for Frontends.
 	DefaultKAFE = false
 )
+
+// ErrFilteredAddress is an error to be used when we need to detect that an
+// error is of this specific type in order to determine the response code.
+var ErrFilteredAddress = errors.New("invalid host: filtered host address")
 
 // MustNew returns a Proxy handler or panics.
 func MustNew(hmacKey []byte, logger zerolog.Logger, options ...func(*Proxy)) *Proxy {
@@ -99,7 +104,8 @@ func MustNew(hmacKey []byte, logger zerolog.Logger, options ...func(*Proxy)) *Pr
 // CheckRedirect implments the redirect manager for http.Client
 func (p *Proxy) checkRedirect(r *http.Request, via []*http.Request) error {
 	if err := p.validateTarget(r.URL); err != nil {
-		return err
+		p.logger.Error().Err(err).Msg(errDetails())
+		return ErrFilteredAddress
 	}
 
 	if len(via) >= p.MaxRedirects {
@@ -199,8 +205,15 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Perform the request.
 	resp, err := p.client.Do(outreq)
 	if err != nil {
+		var code = http.StatusInternalServerError
+		// We have to check for this here as we check in our client's
+		// CheckRedirect function which we can't know before following the
+		// redirects. This is called when we do the upstream request.
+		if err == ErrFilteredAddress {
+			code = http.StatusBadRequest
+		}
 		p.logger.Error().Err(err).Msg(errDetails())
-		http.Error(w, fmt.Sprintf("error processing request: %q", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("error processing request: %q", err), code)
 		return
 	}
 
