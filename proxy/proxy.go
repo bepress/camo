@@ -158,6 +158,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, "OK")
 			return
 		}
+		if r.URL.Path == "/favicon.ico" {
+			w.Header().Set("Expires", time.Now().UTC().AddDate(0, 1, 0).Format(http.TimeFormat))
+			w.Write(bepressFavicon)
+		}
 		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
