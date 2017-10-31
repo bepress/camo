@@ -28,7 +28,23 @@ func TestProxyHealth(t *testing.T) {
 	checkers.OK(t, err)
 	got.Body.Close()
 	checkers.Equals(t, string(body), "OK\n")
+}
 
+func TestFavicon(t *testing.T) {
+	tut := proxy.MustNew([]byte("test"),
+		zerolog.New(ioutil.Discard))
+	ts := httptest.NewTLSServer(tut)
+	client := ts.Client()
+	got, err := client.Get(ts.URL + "/favicon.ico")
+	checkers.OK(t, err)
+
+	checkers.Equals(t, got.Header.Get("Expires"), time.Now().UTC().AddDate(0, 1, 0).Format(http.TimeFormat))
+
+	checkers.Equals(t, got.StatusCode, http.StatusOK)
+	body, err := ioutil.ReadAll(got.Body)
+	checkers.OK(t, err)
+	got.Body.Close()
+	checkers.Equals(t, body[:5], []byte("\x00\x00\x01\x00\x01"))
 }
 
 func TestProxyPanicsNilKey(t *testing.T) {
