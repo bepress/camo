@@ -11,6 +11,7 @@ import (
 
 	"github.com/bepress/camo/checkers"
 	"github.com/bepress/camo/logging"
+	"github.com/bepress/camo/rxid"
 	"github.com/rs/zerolog"
 )
 
@@ -26,11 +27,12 @@ func TestAccessLogger(t *testing.T) {
 		referrer     string
 		userAgent    string
 		forwardedFor string
+		rxid         string
 	}{
-		{"test 1", "example.com", "GET", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1"},
-		{"test POST path only", "example.com", "POST", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1, 192.168.1.1"},
-		{"test GET path with query", "www.example.com", "GET", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1, 172.16.0.1, 192.168.4.5"},
-		{"test GET path with query", "www.example.com", "POST", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", ""},
+		{"test 1", "example.com", "GET", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1", "rxid"},
+		{"test POST path only", "example.com", "POST", "/blah", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1, 192.168.1.1", "anid"},
+		{"test GET path with query", "www.example.com", "GET", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "10.1.1.1, 172.16.0.1, 192.168.4.5", "someid"},
+		{"test GET path with query", "www.example.com", "POST", "/blah?a=b&a=c", "HTTP/1.1", 200, "foo", "http://locahost/bar", "Go-http-client/1.1", "", "lookandid"},
 	}
 
 	out := &bytes.Buffer{}
@@ -46,16 +48,19 @@ func TestAccessLogger(t *testing.T) {
 
 	for _, test := range table {
 		out.Reset()
-		ts := httptest.NewServer(logging.NewAccessLogger(http.HandlerFunc(
+		ts := httptest.NewServer(rxid.Handler(logging.NewAccessLogger(http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(test.response))
-			}), logger))
+			}), logger)))
 		defer ts.Close()
 
 		req, err := http.NewRequest(test.method, ts.URL+test.uri, nil)
 		checkers.OK(t, err)
 		req.Header.Add("Referer", test.referrer)
 		req.Header.Add("X-Forwarded-For", test.forwardedFor)
+
+		req.Header.Add("X-Request-ID", test.rxid)
+
 		req.Host = test.host
 
 		res, err := client.Do(req)
@@ -78,11 +83,13 @@ func TestAccessLogger(t *testing.T) {
 		checkers.Equals(t, got.ClientIP, "127.0.0.1")
 		checkers.Equals(t, got.ReponseBytes, len(test.response))
 		checkers.Equals(t, got.XForwardedFor, strings.Split(test.forwardedFor, ", "))
+		checkers.Equals(t, got.RequestID, test.rxid)
 	}
 
 }
 
 type proxyLogRecord struct {
+	RequestID     string   `json:"request_id"`
 	Time          string   `json:"time"`
 	Level         string   `json:"level"`
 	App           string   `json:"app"`

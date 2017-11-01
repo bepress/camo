@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bepress/camo/rxid"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/rs/zerolog"
 )
@@ -97,10 +98,12 @@ func (al *AccessLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		status:         http.StatusOK,
 	}
 	start := time.Now()
+
 	al.handler.ServeHTTP(bc, r)
 	dur := time.Since(start)
 
 	al.logger.Info().
+		Str("request_id", rxid.FromContext(r.Context())).
 		Str("client_ip", clientIP).
 		Strs("x_forwarded_for", strings.Split(r.Header.Get("X-Forwarded-For"), ", ")).
 		Dur("duration", dur).

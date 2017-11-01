@@ -49,6 +49,12 @@
   revision = "8d545a64bed8322f557288418ed0b3701c1b741c"
 
 [[projects]]
+  name = "github.com/rs/xid"
+  packages = ["."]
+  revision = "02dd45c33376f85d1064355dc790dcc4850596b1"
+  version = "v1.1"
+
+[[projects]]
   name = "github.com/rs/zerolog"
   packages = [".","internal/json","log"]
   revision = "3ac71fc58dbd43122668a912b755b0979ba9ce1f"
@@ -57,6 +63,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "71866294c9993aade55a6cdb91d068a36710bf1eaf6aaae1021482d27ecf4b87"
+  inputs-digest = "e5a7a466f40ba342af76768eddb6bb7a4c6d5c9b109f1523db135b4f2b3c9860"
   solver-name = "gps-cdcl"
   solver-version = 1
