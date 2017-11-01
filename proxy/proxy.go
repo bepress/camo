@@ -206,11 +206,14 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp, err := p.client.Do(outreq)
 	if err != nil {
 		var code = http.StatusInternalServerError
-		// We have to check for this here as we check in our client's
-		// CheckRedirect function which we can't know before following the
-		// redirects. This is called when we do the upstream request.
-		if err == ErrFilteredAddress {
-			code = http.StatusBadRequest
+		// We have to check for ErrFilteredAddress here as we check in our
+		// client's CheckRedirect function which we can't know before
+		// following the redirects. This is called when we do the upstream
+		// request.
+		if nerr, ok := err.(*url.Error); ok {
+			if nerr.Err == ErrFilteredAddress {
+				code = http.StatusBadRequest
+			}
 		}
 		p.logger.Error().Err(err).Msg(errDetails())
 		http.Error(w, fmt.Sprintf("error processing request: %q", err), code)
