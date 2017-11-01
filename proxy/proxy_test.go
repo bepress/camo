@@ -119,7 +119,7 @@ func TestRedirectFilters(t *testing.T) {
 		checkers.OK(t, err)
 
 		err = tut.RedirFunc(req, []*http.Request{})
-		checkers.Equals(t, err.Error(), fmt.Sprintf("filtered host address: %q", test.hostIP))
+		checkers.Equals(t, err.Error(), fmt.Sprintf("invalid redirect: filtered host address: %q", test.hostIP))
 	}
 
 }
