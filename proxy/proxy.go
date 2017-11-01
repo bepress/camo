@@ -99,7 +99,7 @@ func MustNew(hmacKey []byte, logger zerolog.Logger, options ...func(*Proxy)) *Pr
 // CheckRedirect implments the redirect manager for http.Client
 func (p *Proxy) checkRedirect(r *http.Request, via []*http.Request) error {
 	if err := p.validateTarget(r.URL); err != nil {
-		return err
+		return fmt.Errorf("invalid redirect: %s", err.Error())
 	}
 
 	if len(via) >= p.MaxRedirects {
@@ -195,8 +195,14 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Perform the request.
 	resp, err := p.client.Do(outreq)
 	if err != nil {
+		var statusCode int
 		p.logger.Error().Err(err).Msg(errDetails())
-		http.Error(w, fmt.Sprintf("error processing request: %q", err), http.StatusInternalServerError)
+		if strings.HasPrefix(fmt.Sprintf("%s", err), "invalid redirect:") {
+			statusCode = http.StatusBadRequest
+		} else {
+			statusCode = http.StatusInternalServerError
+		}
+		http.Error(w, fmt.Sprintf("error processing request: %q", err), statusCode)
 		return
 	}
 
