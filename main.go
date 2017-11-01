@@ -22,6 +22,7 @@ import (
 	"github.com/bepress/camo/helpers"
 	"github.com/bepress/camo/logging"
 	"github.com/bepress/camo/proxy"
+	"github.com/bepress/camo/rxid"
 	"github.com/reedobrien/cowl"
 	"github.com/rs/zerolog"
 )
@@ -120,9 +121,10 @@ func main() {
 	p := proxy.MustNew([]byte(hmac), logger, options...)
 	// Wrap proxy handler with logger.
 	proxyHandler := logging.NewAccessLogger(p, logger)
+	handler := rxid.Handler(proxyHandler)
 	s := http.Server{
 		Addr:         *addr,
-		Handler:      proxyHandler,
+		Handler:      handler,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,

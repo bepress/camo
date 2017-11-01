@@ -16,6 +16,7 @@ import (
 
 	"github.com/bepress/camo/decoder"
 	"github.com/bepress/camo/filter"
+	"github.com/bepress/camo/rxid"
 	"github.com/reedobrien/rbp"
 	"github.com/rs/zerolog"
 )
@@ -104,7 +105,7 @@ func MustNew(hmacKey []byte, logger zerolog.Logger, options ...func(*Proxy)) *Pr
 // CheckRedirect implments the redirect manager for http.Client
 func (p *Proxy) checkRedirect(r *http.Request, via []*http.Request) error {
 	if err := p.validateTarget(r.URL); err != nil {
-		p.logger.Error().Err(err).Msg(errDetails())
+		p.logger.Error().Err(err).Str("request_id", rxid.FromContext(r.Context())).Msg(errDetails())
 		return ErrFilteredAddress
 	}
 
@@ -144,6 +145,8 @@ type Proxy struct {
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.setResponseHeaders(w)
 
+	xid := rxid.FromContext(r.Context())
+
 	if r.Method != "GET" && r.Method != "HEAD" {
 		w.Header().Add("Allowed", "GET,HEAD")
 		http.Error(w, fmt.Sprintf("Method not allowed: %s", r.Method), http.StatusMethodNotAllowed)
@@ -167,29 +170,30 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/favicon.ico" {
 			w.Header().Set("Expires", time.Now().UTC().AddDate(0, 1, 0).Format(http.TimeFormat))
 			w.Write(bepressFavicon)
+			return
 		}
-		p.logger.Error().Err(err).Msg(errDetails())
+		p.logger.Error().Err(err).Str("request_id", xid).Msg(errDetails())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Decode the URL.
 	uStr, err := p.Decoder.Decode(sig, encodedURL)
 	if err != nil {
-		p.logger.Error().Err(err).Msg(errDetails())
+		p.logger.Error().Err(err).Str("request_id", xid).Msg(errDetails())
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
 	u, err := url.Parse(uStr)
 	if err != nil {
-		p.logger.Error().Err(err).Msg(errDetails())
+		p.logger.Error().Err(err).Str("request_id", xid).Msg(errDetails())
 		http.Error(w, "Invalid downstream URL: "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	// Validate the target host
 	if err = p.validateTarget(u); err != nil {
-		p.logger.Error().Err(err).Msg(errDetails())
+		p.logger.Error().Err(err).Str("request_id", xid).Msg(errDetails())
 		http.Error(w, "invalid host: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -197,7 +201,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Build the request for downstream.
 	outreq, err := p.buildRequest(u, w, r)
 	if err != nil {
-		p.logger.Error().Err(err).Msg(errDetails())
+		p.logger.Error().Err(err).Str("request_id", xid).Msg(errDetails())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -212,13 +216,15 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err == ErrFilteredAddress {
 			code = http.StatusBadRequest
 		}
-		p.logger.Error().Err(err).Msg(errDetails())
+		p.logger.Error().Err(err).Str("request_id", xid).Msg(errDetails())
 		http.Error(w, fmt.Sprintf("error processing request: %q", err), code)
 		return
 	}
 
 	// Log information about the upstream request/response.
 	p.logger.Info().
+		Str("type", "info").
+		Str("request_id", xid).
 		Str("upstream_domain", outreq.Host).
 		Int("upstream_response", resp.StatusCode).
 		Str("upstream_path", outreq.URL.Path).
