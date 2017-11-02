@@ -16,3 +16,4 @@ _workdir/
 .cover/
 vendor/
 _artifacts/
+_e2e_tests

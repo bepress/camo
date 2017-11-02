@@ -12,13 +12,14 @@ import (
 	"github.com/bepress/camo/checkers"
 	"github.com/bepress/camo/filter"
 	"github.com/bepress/camo/proxy"
+	"github.com/bepress/camo/rxid"
 	"github.com/rs/zerolog"
 )
 
 func TestProxyHealth(t *testing.T) {
 	tut := proxy.MustNew([]byte("test"),
 		zerolog.New(ioutil.Discard))
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	client := ts.Client()
 	got, err := client.Get(ts.URL + "/health")
 	checkers.OK(t, err)
@@ -33,7 +34,7 @@ func TestProxyHealth(t *testing.T) {
 func TestFavicon(t *testing.T) {
 	tut := proxy.MustNew([]byte("test"),
 		zerolog.New(ioutil.Discard))
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	client := ts.Client()
 	got, err := client.Get(ts.URL + "/favicon.ico")
 	checkers.OK(t, err)
@@ -118,6 +119,8 @@ func TestRedirectFilters(t *testing.T) {
 		req, err := http.NewRequest("GET", test.decoded, nil)
 		checkers.OK(t, err)
 
+		req = req.WithContext(rxid.NewContextWithID(req.Context(), req))
+
 		err = tut.RedirFunc(req, []*http.Request{})
 		checkers.Equals(t, err, proxy.ErrFilteredAddress)
 	}
@@ -195,7 +198,7 @@ func TestAllowedMethods(t *testing.T) {
 	)
 
 	// The test camo server which decodes and fetches from backend.
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 
 	client := ts.Client()
 	// Disable compression since we don't set it up on the BE.
@@ -259,7 +262,7 @@ func TestExpectedHeaders(t *testing.T) {
 				p.Decoder = DummyDecoder{url: "http://example.com/someurl"}
 			},
 		)
-		ts := httptest.NewTLSServer(tut)
+		ts := httptest.NewTLSServer(rxid.Handler(tut))
 		client := ts.Client()
 		resp, err := client.Get(ts.URL + test.uri)
 		checkers.OK(t, err)
@@ -281,7 +284,7 @@ func TestRedirectLoop(t *testing.T) {
 			p.Decoder = DummyDecoder{url: "http://example.com/someurl"}
 		},
 	)
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	client := ts.Client()
 	req, err := http.NewRequest("GET", ts.URL+"/sig/url", nil)
 	checkers.OK(t, err)
@@ -323,7 +326,7 @@ func TestInvalidPathOrURL(t *testing.T) {
 	}
 
 	tut := proxy.MustNew([]byte("test"), zerolog.New(ioutil.Discard))
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	client := ts.Client()
 	for _, test := range table {
 		resp, err := client.Get(ts.URL + test.uri)
@@ -343,7 +346,7 @@ func TestDefaultFilter(t *testing.T) {
 		func(p *proxy.Proxy) { p.Decoder = DummyDecoder{url: "http://10.1.10.1/someurl"} },
 	)
 
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	client := ts.Client()
 
 	table := []struct {
@@ -445,7 +448,7 @@ func TestReverseProxyFlushInterval(t *testing.T) {
 	proxy.OnExitFlushLoop = func() { done <- true }
 	defer func() { proxy.OnExitFlushLoop = nil }()
 
-	frontend := httptest.NewServer(tut)
+	frontend := httptest.NewServer(rxid.Handler(tut))
 	defer frontend.Close()
 
 	req, _ := http.NewRequest("GET", frontend.URL+"/ldskjf/lsdkjf", nil)
@@ -489,7 +492,7 @@ func TestResponseFound(t *testing.T) {
 		},
 	)
 
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	resp, err := ts.Client().Get(ts.URL + "/sldkjf/lsdkfj")
 	checkers.OK(t, err)
 	checkers.Equals(t, resp.StatusCode, http.StatusNotFound)
@@ -520,7 +523,7 @@ func TestResponseInternalError(t *testing.T) {
 		},
 	)
 
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	resp, err := ts.Client().Get(ts.URL + "/sldkjf/lsdkfj")
 	checkers.OK(t, err)
 	checkers.Equals(t, resp.StatusCode, http.StatusBadGateway)
@@ -551,7 +554,7 @@ func TestResponsePayloadTooLarge(t *testing.T) {
 		},
 	)
 
-	ts := httptest.NewTLSServer(tut)
+	ts := httptest.NewTLSServer(rxid.Handler(tut))
 	resp, err := ts.Client().Get(ts.URL + "/sldkjf/lsdkfj")
 	checkers.OK(t, err)
 	checkers.Equals(t, resp.StatusCode, http.StatusRequestEntityTooLarge)
