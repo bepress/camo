@@ -120,19 +120,9 @@ workflows:
             branches:
               ignore: /.*/
 
-      - hold:
-          type: approval
-          requires:
-            - check_staging
-          filters:
-            tags:
-              only: /20.*/
-            branches:
-              ignore: /.*/
-
       - release_production:
           requires:
-            - hold
+            - check_staging
           filters:
             tags:
               only: /20.*/
