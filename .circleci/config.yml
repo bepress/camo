@@ -69,6 +69,7 @@ jobs:
         working_directory: /go/src/github.com/bepress/camo
 
         steps:
+            - checkout
             - run:
                 name: Get e2e tests
                 command: |
