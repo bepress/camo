@@ -5,7 +5,6 @@
 
 PROJECT			=camo
 PROJECT_DIR		=$(shell pwd)
-
 GOFILES         :=$(shell find . -name '*.go' -not -path './vendor/*')
 GOPACKAGES      :=$(shell go list ./... | grep -v /vendor/| grep -v /checkers)
 OS              := $(shell go env GOOS)
@@ -112,6 +111,14 @@ deploy_staging:
 deploy_production:
 # NB: This target is intended for CircleCI.
 	deploy production camo-asg camo --account-id=596234948724
+
+download_e2e_tests:
+	mkdir -p $(WORKDIR)
+	aws s3 cp s3://$(ARTIFACT_BUCKET)/e2e_tests/production/e2e_tests_camo_$(OS)_$(ARCH) $(WORKDIR)/
+	chmod 755 $(WORKDIR)/e2e_tests_camo_$(OS)_$(ARCH)
+
+e2e_tests:
+	$(WORKDIR)/e2e_tests_camo_$(OS)_$(ARCH)
 
 test:
 	CGO_ENABLED=0 go test $(GOPACKAGES)
