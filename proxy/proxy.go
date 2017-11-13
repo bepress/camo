@@ -218,6 +218,12 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if nerr.Err == ErrFilteredAddress {
 				code = http.StatusBadRequest
 			}
+			if strings.HasSuffix(nerr.Err.Error(), "i/o timeout") {
+				// The actual error here is poll.TimeoutErr. Poll is an
+				// internal library so we cannot import it. Therefore we do
+				// this gross string checking here.
+				code = http.StatusGatewayTimeout
+			}
 		}
 		p.logger.Error().Err(err).Str("request_id", xid).Msg(errDetails())
 		http.Error(w, fmt.Sprintf("error processing request: %q", err), code)
