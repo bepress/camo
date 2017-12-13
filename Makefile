@@ -106,11 +106,11 @@ promote_production:
 
 deploy_staging:
 # NB: This target is intended for CircleCI.
-	deploy staging camo-asg camo --account-id=628855009903
+	deploy --environment=staging --tags=Name=camo --tags=app=camo --account-id=628855009903
 
 deploy_production:
 # NB: This target is intended for CircleCI.
-	deploy production camo-asg camo --account-id=596234948724
+	deploy --environment=production --tags=Name=camo --tags=app=camo --account-id=596234948724
 
 download_e2e_tests:
 	mkdir -p $(WORKDIR)
