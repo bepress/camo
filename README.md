@@ -10,7 +10,6 @@ After cloning the repo run make develop:
 
 `make develop`
 
-
 This does three things. First it runs the dependencies target (see dependencies below). Second, it adds a pre-push hook which lints and runs tests before to validate things when pushing to github.
 
 Finally, it also initializes git flow.
